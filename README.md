@@ -244,5 +244,8 @@ npm run preview   # http://localhost:4173/candys-paradise/
   на статическом GitHub Pages включён демо-режим.
 - **Фотографии** — реальные работы кондитерской; на одном кадре есть водяной знак
   (`@grisha_kryt`) — его стоит заменить чистым файлом.
-- Git в текущем окружении не установлен, поэтому коммит и включение Pages
-  выполняются вручную по инструкции выше.
+- Репозиторий уже подготовлен локально (в папке есть `.git` с коммитом). Осталось
+  опубликовать его: **GitHub Desktop → File → Add local repository** → выбрать папку
+  `Konditerskaya-demo` → **Publish repository**, затем **Settings → Pages → Source:
+  GitHub Actions**. `node_modules` и `dist` в индекс не попадают (см. `.gitignore`).
+
