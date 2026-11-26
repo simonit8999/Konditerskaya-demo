@@ -1,0 +1,44 @@
+{
+  "id": "./",
+  "name": "Кондитерский Рай — конструктор тортов для кондитерских",
+  "short_name": "Кондитерский Рай",
+  "description": "Онлайн-конструктор тортов для кондитерских: клиент собирает заказ сам, цена считается автоматически, а заявка приходит в Telegram.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#FFF8E1",
+  "theme_color": "#FFF8E1",
+  "categories": ["business", "food", "shopping"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Собрать торт",
+      "short_name": "Конструктор",
+      "description": "Открыть конструктор торта",
+      "url": "./#/builder",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Мои заказы",
+      "short_name": "Заказы",
+      "description": "Статусы оформленных заказов",
+      "url": "./#/orders",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Доставка и оплата",
+      "short_name": "Доставка",
+      "url": "./#/delivery"
+    }
+  ],
+  "prefer_related_applications": false
+}

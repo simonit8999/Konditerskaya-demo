@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Кондитерский Рай — конструктор тортов для кондитерских</title>
+    <meta
+      name="description"
+      content="Онлайн-конструктор тортов для кондитерских: клиент собирает заказ сам, цена считается автоматически, а готовая заявка приходит в Telegram."
+    />
+    <meta name="theme-color" content="#FFF8E1" />
+    <meta name="color-scheme" content="light" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Кондитерский Рай" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Кондитерский Рай" />
+    <meta property="og:title" content="Кондитерский Рай — торты в один клик от клиента" />
+    <meta
+      property="og:description"
+      content="B2B-платформа онлайн-заказов для кондитерских: конструктор тортов, автоматический расчёт цены, заказы в Telegram."
+    />
+    <meta property="og:image" content="icons/icon-512.png" />
+    <meta property="og:locale" content="ru_RU" />
+
+    <style>
+      /* Фон до загрузки React — чтобы не было белой вспышки */
+      html,
+      body {
+        background-color: #fff8e1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

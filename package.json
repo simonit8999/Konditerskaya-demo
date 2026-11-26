@@ -1,0 +1,29 @@
+{
+  "name": "candys-paradise",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Кондитерский Рай (Candys Paradise) — PWA-конструктор тортов для кондитерских (B2B)",
+  "workspaces": [
+    "apps/extension",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @candys/extension",
+    "dev:api": "npm run dev -w @candys/api",
+    "build": "npm run build -w @candys/extension",
+    "preview": "npm run preview -w @candys/extension",
+    "typecheck": "npm run typecheck -w @candys/extension",
+    "test": "npm run test -w @candys/extension",
+    "icons": "node scripts/generate-icons.mjs",
+    "images": "node scripts/optimize-images.mjs",
+    "smoke:api": "node scripts/smoke-api.mjs",
+    "smoke:preview": "node scripts/smoke-preview.mjs",
+    "check": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

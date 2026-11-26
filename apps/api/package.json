@@ -1,0 +1,14 @@
+{
+  "name": "@candys/api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Заглушка API «Кондитерский Рай»: приём заказа и отправка в Telegram",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/server.mjs",
+    "start": "node --env-file-if-exists=.env src/server.mjs"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
