@@ -9,7 +9,15 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { siteContent } from '@/references';
 import { cn } from '@/utils/cn';
 
-const NAVIGATION = [
+interface NavItem {
+  to: string;
+  label: string;
+  /** Кабинет владельца — единственный раздел «для кондитера», поэтому с иконкой. */
+  owner?: boolean;
+}
+
+const NAVIGATION: NavItem[] = [
+  { to: '/admin', label: 'Кабинет', owner: true },
   { to: '/', label: 'Главная' },
   { to: '/builder', label: 'Конструктор' },
   { to: '/delivery', label: 'Доставка' },
@@ -17,9 +25,11 @@ const NAVIGATION = [
   { to: '/contacts', label: 'Контакты' },
 ];
 
+const OWNER_TITLE = 'Кабинет владельца: заказы, выручка и прибыль';
+
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'rounded-full px-3.5 py-2 text-sm font-semibold transition-colors',
+    'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors',
     isActive ? 'bg-cream-200 text-cocoa' : 'text-ink/70 hover:bg-cream-200/60 hover:text-cocoa',
   );
 
@@ -35,10 +45,23 @@ export function Header() {
           <Logo />
         </Link>
 
-        <nav aria-label="Основная навигация" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Основная навигация" className="hidden items-center gap-0.5 lg:flex">
           {NAVIGATION.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navLinkClass}>
-              {item.label}
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              title={item.owner ? OWNER_TITLE : undefined}
+              className={navLinkClass}
+            >
+              {item.owner ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon name="wallet" className="size-4 text-caramel" />
+                  {item.label}
+                </span>
+              ) : (
+                item.label
+              )}
             </NavLink>
           ))}
         </nav>
@@ -91,24 +114,22 @@ export function Header() {
 
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title="Меню">
         <nav className="flex flex-col gap-1" aria-label="Мобильная навигация">
-          {[{ to: '/', label: 'Главная' }, ...NAVIGATION.slice(1), { to: '/orders', label: 'Мои заказы' }].map(
-            (item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  cn(
-                    'rounded-2xl px-4 py-3 text-[15px] font-semibold transition-colors',
-                    isActive ? 'bg-cream-200 text-cocoa' : 'text-ink/80 hover:bg-cream-200/60',
-                  )
-                }
-              >
-                {item.label}
-              </NavLink>
-            ),
-          )}
+          {[...NAVIGATION, { to: '/orders', label: 'Мои заказы' }].map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'rounded-2xl px-4 py-3 text-[15px] font-semibold transition-colors',
+                  isActive ? 'bg-cream-200 text-cocoa' : 'text-ink/80 hover:bg-cream-200/60',
+                )
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="mt-4 rounded-2xl bg-mint-soft px-4 py-3 text-xs leading-relaxed text-ink/70">

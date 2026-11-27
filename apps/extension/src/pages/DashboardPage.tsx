@@ -49,12 +49,14 @@ export function DashboardPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
-  const activeOrders = orders.filter((order) => isActiveStatus(order.status));
-  const completedOrders = orders.filter((order) => order.status === 'completed');
-  const declinedOrders = orders.filter((order) => order.status === 'declined');
+  // Демо-заказы кабинета владельца — примеры для кондитера, клиенту их не показываем.
+  const customerOrders = orders.filter((order) => !order.isDemo);
+  const activeOrders = customerOrders.filter((order) => isActiveStatus(order.status));
+  const completedOrders = customerOrders.filter((order) => order.status === 'completed');
+  const declinedOrders = customerOrders.filter((order) => order.status === 'declined');
   const list =
     tab === 'active' ? activeOrders : tab === 'completed' ? completedOrders : declinedOrders;
-  const selected = selectedId ? orders.find((order) => order.id === selectedId) : undefined;
+  const selected = selectedId ? customerOrders.find((order) => order.id === selectedId) : undefined;
   const latestUnread = notifications.find((item) => !item.readAt);
 
   const handleRepeat = (order: Order) => {

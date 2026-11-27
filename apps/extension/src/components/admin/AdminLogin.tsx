@@ -3,22 +3,22 @@ import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
-import { businessSettings } from '@/references';
+import { businessSettings, siteContent } from '@/references';
 
 interface AdminLoginProps {
   onLogin: (pin: string) => boolean;
 }
 
-/** Демо-вход в кабинет владельца по PIN. */
+/** Демо-вход в кабинет владельца: PIN уже подставлен, достаточно нажать «Войти». */
 export function AdminLogin({ onLogin }: AdminLoginProps) {
-  const [pin, setPin] = useState('');
+  const [pin, setPin] = useState(businessSettings.owner.pin);
   const [error, setError] = useState('');
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!onLogin(pin)) {
-      setError('Неверный PIN. Демо-значение указано в business.json.');
+      setError('Неверный PIN. Попробуйте ещё раз.');
       return;
     }
 
@@ -34,14 +34,21 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
 
         <h1 className="mt-4 font-display text-2xl text-cocoa">Кабинет владельца</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/70">
-          Демо-вход по PIN: заказы, статусы, прибыль и заметки. Настоящая авторизация
-          появится вместе с базой данных.
+          Это демо-версия. Полноценная версия будет доступна после согласования с программистом —{' '}
+          <a
+            href={siteContent.seller.telegramHref}
+            target="_blank"
+            rel="noreferrer"
+            className="link-underline font-semibold"
+          >
+            {siteContent.seller.telegram}
+          </a>
+          .
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <Input
             label="PIN"
-            type="password"
             inputMode="numeric"
             autoComplete="off"
             maxLength={8}
@@ -60,8 +67,8 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
         </form>
 
         <p className="mt-4 rounded-2xl bg-cream-100 px-3.5 py-3 text-xs leading-relaxed text-ink/60">
-          Демо-PIN: <strong className="text-cocoa">{businessSettings.owner.pin}</strong>. Смените
-          его в <code className="text-cocoa">src/references/business.json</code>.
+          Демо-PIN: <strong className="text-cocoa">{businessSettings.owner.pin}</strong> (при
+          создании приложения под вас у вас будет персональный пин-код)
         </p>
       </div>
     </div>

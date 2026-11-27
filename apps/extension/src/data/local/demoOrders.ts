@@ -9,14 +9,19 @@ import type {
   OrderStatusEvent,
 } from '@/types';
 import { describeCake } from '@/utils/cake';
-import { addDays, toISODate } from '@/utils/date';
+import { addDays, startOfDay, toISODate } from '@/utils/date';
 import { calculateOrderFinance } from '@/utils/orderFinance';
 import { createId, createOrderNumber } from '@/utils/id';
 import { calculatePrice } from '@/utils/priceCalculator';
 
 interface DemoSpec {
   status: OrderStatus;
+  /** Сколько дней назад оформлен заказ: 0 — сегодня. */
   daysAgo: number;
+  /** Час и минуты оформления — история статусов идёт по порядку и не уезжает в будущее. */
+  hour: number;
+  minute: number;
+  /** Дата получения относительно сегодняшнего дня (может быть в прошлом). */
   deliveryInDays: number;
   method: DeliveryMethod;
   customer: { name: string; phone: string; email?: string; contact?: ContactHandle };
@@ -27,10 +32,13 @@ interface DemoSpec {
 }
 
 const DEMO_SPECS: DemoSpec[] = [
+  // Сегодня: 5 свежих заказов — на них удобно пробовать статусы и оплату.
   {
     status: 'new',
     daysAgo: 0,
-    deliveryInDays: 3,
+    hour: 9,
+    minute: 15,
+    deliveryInDays: 2,
     method: 'delivery',
     customer: {
       name: 'Мария Соколова',
@@ -49,29 +57,29 @@ const DEMO_SPECS: DemoSpec[] = [
     address: 'ул. Примерная, 12, кв. 45',
   },
   {
-    status: 'confirmed',
+    status: 'new',
     daysAgo: 0,
-    deliveryInDays: 2,
+    hour: 10,
+    minute: 40,
+    deliveryInDays: 3,
     method: 'pickup',
-    customer: {
-      name: 'Игорь Петров',
-      phone: '+7 (999) 222-33-44',
-      contact: { channel: 'whatsapp', handle: '+7 999 222-33-44' },
-    },
+    customer: { name: 'Павел Крылов', phone: '+7 (999) 321-54-76' },
     config: {
       sizeId: '2kg',
-      baseId: 'honey',
+      baseId: 'sponge',
       fillingId: 'chocolate',
-      creamId: 'curd',
-      decorationIds: ['figures', 'sprinkles'],
-      inscription: 'Ане 30',
+      creamId: 'cream',
+      decorationIds: ['sprinkles'],
+      inscription: 'С днём рождения, Кира!',
     },
-    comment: 'Без глютена, пожалуйста. Свечи не нужны.',
+    comment: 'Свечи не нужны, торт-сюрприз.',
   },
   {
-    status: 'ready',
-    daysAgo: 1,
-    deliveryInDays: 1,
+    status: 'confirmed',
+    daysAgo: 0,
+    hour: 11,
+    minute: 25,
+    deliveryInDays: 2,
     method: 'pickup',
     customer: { name: 'Ольга Ким', phone: '+7 (999) 333-44-55' },
     config: {
@@ -82,12 +90,81 @@ const DEMO_SPECS: DemoSpec[] = [
       decorationIds: ['creamDecor'],
       inscription: '',
     },
+    comment: 'Дочке 6 лет: нужны свечи и топпер «6».',
+  },
+  {
+    status: 'confirmed',
+    daysAgo: 0,
+    hour: 12,
+    minute: 50,
+    deliveryInDays: 2,
+    method: 'delivery',
+    customer: {
+      name: 'Дмитрий Волков',
+      phone: '+7 (999) 444-55-66',
+      email: 'dmitry@example.com',
+      contact: { channel: 'telegram', handle: '@dmitry_v' },
+    },
+    config: {
+      sizeId: '3kg',
+      baseId: 'sponge',
+      fillingId: 'caramel',
+      creamId: 'cream',
+      decorationIds: ['berries'],
+      inscription: 'С юбилеем!',
+    },
+    comment: 'Доставить к 15:00, пожалуйста.',
+    address: 'Ленинградский пр-т, 40, офис 12',
+  },
+  {
+    status: 'ready',
+    daysAgo: 0,
+    hour: 13,
+    minute: 30,
+    deliveryInDays: 0,
+    method: 'pickup',
+    customer: { name: 'Екатерина Лебедева', phone: '+7 (999) 555-66-77' },
+    config: {
+      sizeId: '2kg',
+      baseId: 'honey',
+      fillingId: 'berry',
+      creamId: 'cheese',
+      decorationIds: [],
+      inscription: '',
+    },
+    ownerNote: 'Клиент оплатит при получении — торт готов и ждёт в витрине.',
+  },
+  // Прошлые дни: доставленные заказы — из них складываются выручка и прибыль.
+  {
+    status: 'completed',
+    daysAgo: 1,
+    hour: 10,
+    minute: 20,
+    deliveryInDays: -1,
+    method: 'delivery',
+    customer: {
+      name: 'Мария Соколова',
+      phone: '+7 (999) 111-22-33',
+      contact: { channel: 'telegram', handle: '@maria_s' },
+    },
+    config: {
+      sizeId: '2kg',
+      baseId: 'sponge',
+      fillingId: 'berry',
+      creamId: 'cream',
+      decorationIds: ['berries'],
+      inscription: 'С днём рождения!',
+    },
+    address: 'ул. Примерная, 12, кв. 45',
+    ownerNote: 'Постоянный клиент: ягоды и надпись, как в прошлый раз.',
   },
   {
     status: 'completed',
-    daysAgo: 9,
-    deliveryInDays: -6,
-    method: 'delivery',
+    daysAgo: 1,
+    hour: 17,
+    minute: 5,
+    deliveryInDays: -1,
+    method: 'pickup',
     customer: {
       name: 'Дмитрий Волков',
       phone: '+7 (999) 444-55-66',
@@ -102,14 +179,55 @@ const DEMO_SPECS: DemoSpec[] = [
       decorationIds: ['berries', 'creamDecor'],
       inscription: 'С юбилеем!',
     },
-    comment: 'Доставить к 15:00, пожалуйста.',
-    address: 'Ленинградский пр-т, 40, офис 12',
     ownerNote: 'Клиент попросил добавить топпер с цифрой 50 — согласовано.',
   },
   {
     status: 'completed',
-    daysAgo: 16,
-    deliveryInDays: -14,
+    daysAgo: 2,
+    hour: 11,
+    minute: 40,
+    deliveryInDays: -2,
+    method: 'pickup',
+    customer: { name: 'Ольга Ким', phone: '+7 (999) 333-44-55' },
+    config: {
+      sizeId: '1kg',
+      baseId: 'mousse',
+      fillingId: 'fruit',
+      creamId: 'cheese',
+      decorationIds: ['creamDecor'],
+      inscription: '',
+    },
+  },
+  {
+    status: 'completed',
+    daysAgo: 2,
+    hour: 16,
+    minute: 15,
+    deliveryInDays: -2,
+    method: 'delivery',
+    customer: {
+      name: 'Игорь Петров',
+      phone: '+7 (999) 222-33-44',
+      contact: { channel: 'whatsapp', handle: '+7 999 222-33-44' },
+    },
+    config: {
+      sizeId: '2kg',
+      baseId: 'honey',
+      fillingId: 'chocolate',
+      creamId: 'curd',
+      decorationIds: ['figures', 'sprinkles'],
+      inscription: 'Ане 30',
+    },
+    comment: 'Без глютена, пожалуйста. Свечи не нужны.',
+    address: 'ул. Садовая, 8, кв. 3',
+  },
+  // Повторные клиенты: чтобы вкладка «Клиенты» и группировка по телефону были осмысленными.
+  {
+    status: 'completed',
+    daysAgo: 3,
+    hour: 9,
+    minute: 50,
+    deliveryInDays: -3,
     method: 'pickup',
     customer: { name: 'Екатерина Лебедева', phone: '+7 (999) 555-66-77' },
     config: {
@@ -122,27 +240,34 @@ const DEMO_SPECS: DemoSpec[] = [
     },
   },
   {
-    status: 'declined',
-    daysAgo: 4,
-    deliveryInDays: 0,
+    status: 'completed',
+    daysAgo: 3,
+    hour: 14,
+    minute: 30,
+    deliveryInDays: -3,
     method: 'delivery',
-    customer: { name: 'Алексей Морозов', phone: '+7 (999) 666-77-88' },
+    customer: {
+      name: 'Наталья Орлова',
+      phone: '+7 (999) 777-88-99',
+      contact: { channel: 'telegram', handle: '@orlova_n' },
+    },
     config: {
-      sizeId: '2kg',
-      baseId: 'sponge',
-      fillingId: 'chocolate',
-      creamId: 'cream',
-      decorationIds: [],
+      sizeId: '3kg',
+      baseId: 'mousse',
+      fillingId: 'berry',
+      creamId: 'cheese',
+      decorationIds: ['berries'],
       inscription: '',
     },
-    comment: 'Перезвоните, пожалуйста, после 18:00.',
-    address: 'ул. Тестовая, 3',
+    comment: 'Для мамы, пожалуйста, без надписи.',
+    address: 'пр-т Мира, 21, кв. 60',
   },
-  // Повторные клиенты: чтобы вкладка «Клиенты» и группировка по телефону были осмысленными.
   {
     status: 'completed',
-    daysAgo: 12,
-    deliveryInDays: -11,
+    daysAgo: 4,
+    hour: 12,
+    minute: 10,
+    deliveryInDays: -4,
     method: 'pickup',
     customer: {
       name: 'Мария Соколова',
@@ -161,28 +286,28 @@ const DEMO_SPECS: DemoSpec[] = [
   },
   {
     status: 'completed',
-    daysAgo: 25,
-    deliveryInDays: -24,
+    daysAgo: 4,
+    hour: 18,
+    minute: 45,
+    deliveryInDays: -4,
     method: 'delivery',
-    customer: {
-      name: 'Мария Соколова',
-      phone: '+7 (999) 111-22-33',
-      contact: { channel: 'telegram', handle: '@maria_s' },
-    },
+    customer: { name: 'Сергей Титов', phone: '+7 (999) 888-99-00' },
     config: {
-      sizeId: '3kg',
+      sizeId: '1kg',
       baseId: 'sponge',
-      fillingId: 'berry',
+      fillingId: 'chocolate',
       creamId: 'cream',
-      decorationIds: ['berries', 'creamDecor'],
-      inscription: 'Любимой маме',
+      decorationIds: [],
+      inscription: '',
     },
-    address: 'ул. Примерная, 12, кв. 45',
+    address: 'ул. Лесная, 5',
   },
   {
     status: 'completed',
-    daysAgo: 20,
-    deliveryInDays: -19,
+    daysAgo: 5,
+    hour: 10,
+    minute: 5,
+    deliveryInDays: -5,
     method: 'pickup',
     customer: {
       name: 'Игорь Петров',
@@ -199,27 +324,69 @@ const DEMO_SPECS: DemoSpec[] = [
     },
     comment: 'Повторный заказ: без глютена, как в прошлый раз.',
   },
+  {
+    status: 'completed',
+    daysAgo: 5,
+    hour: 15,
+    minute: 35,
+    deliveryInDays: -5,
+    method: 'delivery',
+    customer: {
+      name: 'Анна Белова',
+      phone: '+7 (999) 123-45-67',
+      contact: { channel: 'telegram', handle: '@anna_belova' },
+    },
+    config: {
+      sizeId: '3kg',
+      baseId: 'sponge',
+      fillingId: 'berry',
+      creamId: 'cream',
+      decorationIds: ['berries', 'creamDecor'],
+      inscription: 'Любимой маме',
+    },
+    address: 'ул. Примерная, 12, кв. 45',
+  },
 ];
 
-function shiftIso(iso: string, hours: number): string {
-  return new Date(new Date(iso).getTime() + hours * 60 * 60 * 1000).toISOString();
+const MS_PER_MINUTE = 60 * 1000;
+
+/** Событие не может оказаться в будущем — иначе история статусов выглядит странно. */
+function notLaterThan(date: Date, latest: Date): Date {
+  return date.getTime() > latest.getTime() ? latest : date;
 }
 
-function buildHistory(status: OrderStatus, createdAt: string): OrderStatusEvent[] {
+/** «Сейчас минус минута», но не раньше начала сегодняшнего дня (заказы «за сегодня»). */
+function latestMoment(now: Date): Date {
+  return new Date(Math.max(now.getTime() - MS_PER_MINUTE, startOfDay(now).getTime()));
+}
+
+/** Время оформления: нужный день + час/минуты из спецификации, но не позже «сейчас». */
+function specCreatedAt(spec: DemoSpec, now: Date): Date {
+  const day = startOfDay(addDays(now, -spec.daysAgo));
+  day.setHours(spec.hour, spec.minute, 0, 0);
+  return notLaterThan(day, latestMoment(now));
+}
+
+function buildHistory(status: OrderStatus, createdAt: string, now: Date): OrderStatusEvent[] {
+  const created = new Date(createdAt);
+  const latest = latestMoment(now);
+  const after = (hours: number): string =>
+    notLaterThan(new Date(created.getTime() + hours * 60 * MS_PER_MINUTE), latest).toISOString();
+
   const history: OrderStatusEvent[] = [{ status: 'new', at: createdAt, actor: 'customer' }];
 
   if (status === 'new') return history;
   if (status === 'declined') {
-    history.push({ status: 'declined', at: shiftIso(createdAt, 3), actor: 'owner' });
+    history.push({ status: 'declined', at: after(3), actor: 'owner' });
     return history;
   }
 
-  history.push({ status: 'confirmed', at: shiftIso(createdAt, 2), actor: 'owner' });
+  history.push({ status: 'confirmed', at: after(1), actor: 'owner' });
   if (status === 'confirmed') return history;
 
-  history.push({ status: 'ready', at: shiftIso(createdAt, 26), actor: 'owner' });
+  history.push({ status: 'ready', at: after(2), actor: 'owner' });
   if (status === 'completed') {
-    history.push({ status: 'completed', at: shiftIso(createdAt, 30), actor: 'owner' });
+    history.push({ status: 'completed', at: after(3), actor: 'owner' });
   }
 
   return history;
@@ -227,8 +394,8 @@ function buildHistory(status: OrderStatus, createdAt: string): OrderStatusEvent[
 
 function buildDemoOrder(spec: DemoSpec): Order {
   const now = new Date();
-  const createdAt = addDays(now, -spec.daysAgo).toISOString();
-  const history = buildHistory(spec.status, createdAt);
+  const createdAt = specCreatedAt(spec, now).toISOString();
+  const history = buildHistory(spec.status, createdAt, now);
   const price = calculatePrice(spec.config, cakeData).total;
   const description = describeCake(spec.config, cakeData);
   const deliveryFee = spec.method === 'delivery' ? siteContent.delivery.fee : 0;
@@ -278,7 +445,11 @@ function buildDemoOrder(spec: DemoSpec): Order {
   };
 }
 
-/** Набор демо-заказов для кабинета владельца: все статусы и разные сценарии. */
+/**
+ * Набор демо-заказов для кабинета владельца:
+ * 10 доставленных заказов за последние 5 дней (по 2 в день — из них выручка и прибыль)
+ * и 5 заказов за сегодня в работе, чтобы можно было менять статусы и отмечать оплату.
+ */
 export function buildDemoOrders(): Order[] {
   return DEMO_SPECS.map(buildDemoOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

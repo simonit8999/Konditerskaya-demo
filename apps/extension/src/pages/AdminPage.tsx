@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AdminLogin } from '@/components/admin/AdminLogin';
 import { AdminOrderCard } from '@/components/admin/AdminOrderCard';
 import { CustomersTable } from '@/components/admin/CustomersTable';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { useOrders } from '@/hooks/useOrders';
 import { useOwnerSession } from '@/hooks/useOwnerSession';
 import { useToast } from '@/hooks/useToast';
-import { businessSettings } from '@/references';
+import { businessSettings, siteContent } from '@/references';
 import type { OrderStatus } from '@/types';
 import { cn } from '@/utils/cn';
 import { aggregateCustomers } from '@/utils/customerStats';
@@ -21,6 +21,9 @@ import { ORDER_STATUSES, ORDER_STATUS_LABELS } from '@/utils/orderStatus';
 
 type Filter = 'all' | OrderStatus;
 type AdminTab = 'orders' | 'customers';
+
+/** Окно KPI и графика: демо-данные покрывают последнюю неделю. */
+const DASHBOARD_DAYS = 7;
 
 /** Кабинет владельца: KPI, график, заказы, статусы и прибыль. Демо-режим. */
 export function AdminPage() {
@@ -33,6 +36,19 @@ export function AdminPage() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const autoSeeded = useRef(false);
+
+  // Демо-кабинет не должен открываться пустым: при первом входе сразу
+  // подкладываем примеры заказов (реальные заказы не затрагиваются).
+  useEffect(() => {
+    if (!isOwner || autoSeeded.current || loading) return;
+    if (orders.length > 0 || !businessSettings.admin.demoSeed) return;
+
+    autoSeeded.current = true;
+    void seedDemo().catch(() => {
+      // Тихо: кнопка «Загрузить демо-заказы» остаётся на месте.
+    });
+  }, [isOwner, loading, orders.length, seedDemo]);
 
   if (!isOwner) return <AdminLogin onLogin={login} />;
 
@@ -107,8 +123,7 @@ export function AdminPage() {
             {owner.name}, добрый день
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge tone="gold">Демо-режим</Badge>
-            <span className="text-xs text-ink/55">Заказы хранятся в этом браузере</span>
+            <Badge tone="gold">Демо-версия</Badge>
           </div>
         </div>
 
@@ -127,17 +142,25 @@ export function AdminPage() {
       </div>
 
       <div className="mt-4 rounded-2xl border border-caramel/30 bg-gold/10 px-4 py-3 text-xs leading-relaxed text-ink/70">
-        <strong className="text-cocoa">Это демо-кабинет.</strong> Пока данные хранятся в этом
-        браузере. Для заказов с других устройств нужен сервер и БД — архитектура и схема уже
-        подготовлены (<code className="text-cocoa">docs/database-schema.md</code>).
+        <strong className="text-cocoa">Это демо-версия.</strong> Полноценная версия будет
+        доступна после согласования с программистом — напишите в Telegram:{' '}
+        <a
+          href={siteContent.seller.telegramHref}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-semibold text-caramel-dark transition-colors hover:text-cocoa"
+        >
+          <Icon name="telegram" className="size-3.5" />
+          {siteContent.seller.telegram}
+        </a>
       </div>
 
       {loading && orders.length === 0 && (
         <p className="mt-4 text-xs text-ink/50">Загружаем заказы…</p>
       )}
 
-      <StatCards orders={orders} />
-      <RevenueChart orders={orders} />
+      <StatCards orders={orders} days={DASHBOARD_DAYS} />
+      <RevenueChart orders={orders} days={DASHBOARD_DAYS} />
 
       <section className="mt-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
