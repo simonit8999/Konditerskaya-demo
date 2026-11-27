@@ -170,8 +170,13 @@ size.basePrice
 ## Деплой на GitHub Pages
 
 1. Запушьте проект в репозиторий (ветка `main`).
-2. **Settings → Pages → Source: GitHub Actions**.
-3. Push в `main` запускает `.github/workflows/deploy.yml`:
+2. **Один раз** включите Pages: **Settings → Pages → Build and deployment →
+   Source: GitHub Actions**. Без этого шаг `Configure Pages` падает с ошибкой
+   `Get Pages site failed... Not Found`. Автоматически включить Pages из workflow
+   нельзя: для создания Pages-сайта нужен PAT или GitHub App token, а
+   `GITHUB_TOKEN` таких прав не имеет. Для приватного репозитория на бесплатном
+   плане GitHub Pages недоступны — репозиторий должен быть публичным.
+3. Дальше каждый push в `main` запускает `.github/workflows/deploy.yml`:
    `npm ci` → `typecheck` → `test` → `build` (с `VITE_BASE_PATH=/<имя-репозитория>/`)
    → публикация `apps/extension/dist`.
 4. Витрина: `https://<user>.github.io/<repo>/`.
@@ -244,8 +249,7 @@ npm run preview   # http://localhost:4173/candys-paradise/
   на статическом GitHub Pages включён демо-режим.
 - **Фотографии** — реальные работы кондитерской; на одном кадре есть водяной знак
   (`@grisha_kryt`) — его стоит заменить чистым файлом.
-- Репозиторий уже подготовлен локально (в папке есть `.git` с коммитом). Осталось
-  опубликовать его: **GitHub Desktop → File → Add local repository** → выбрать папку
-  `Konditerskaya-demo` → **Publish repository**, затем **Settings → Pages → Source:
-  GitHub Actions**. `node_modules` и `dist` в индекс не попадают (см. `.gitignore`).
+- Репозиторий готов к загрузке; после первого push один раз включите
+  **Settings → Pages → Source: GitHub Actions** (подробнее выше). `node_modules`
+  и `dist` в индекс не попадают (см. `.gitignore`).
 
