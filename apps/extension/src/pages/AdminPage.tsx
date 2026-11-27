@@ -28,7 +28,7 @@ const DASHBOARD_DAYS = 7;
 /** Кабинет владельца: KPI, график, заказы, статусы и прибыль. Демо-режим. */
 export function AdminPage() {
   const { isOwner, login, logout, owner } = useOwnerSession();
-  const { orders, loading, updateStatus, updateNote, seedDemo } = useOrders();
+  const { orders, loading, updateStatus, updateNote, seedDemo, ensureDemo } = useOrders();
   const { showToast } = useToast();
 
   const [tab, setTab] = useState<AdminTab>('orders');
@@ -38,17 +38,19 @@ export function AdminPage() {
   const [seeding, setSeeding] = useState(false);
   const autoSeeded = useRef(false);
 
-  // Демо-кабинет не должен открываться пустым: при первом входе сразу
-  // подкладываем примеры заказов (реальные заказы не затрагиваются).
+  // Демо-кабинет не должен открываться пустым: при входе подкладываем
+  // примеры заказов, даже если в браузере уже есть заказ клиента.
+  // ensureDemo сам решает, нужен ли набор: он не дублирует заказы
+  // и не перезаписывает статусы, если демо-данные уже актуальны.
   useEffect(() => {
     if (!isOwner || autoSeeded.current || loading) return;
-    if (orders.length > 0 || !businessSettings.admin.demoSeed) return;
+    if (!businessSettings.admin.demoSeed) return;
 
     autoSeeded.current = true;
-    void seedDemo().catch(() => {
+    void ensureDemo().catch(() => {
       // Тихо: кнопка «Загрузить демо-заказы» остаётся на месте.
     });
-  }, [isOwner, loading, orders.length, seedDemo]);
+  }, [isOwner, loading, ensureDemo]);
 
   if (!isOwner) return <AdminLogin onLogin={login} />;
 

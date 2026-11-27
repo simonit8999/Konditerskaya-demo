@@ -1,4 +1,4 @@
-import { buildDemoOrders } from '@/data/local/demoOrders';
+import { buildDemoOrders, DEMO_DATA_VERSION } from '@/data/local/demoOrders';
 import type { OrderDraft, OrderFilter, OrderRepository } from '@/data/types';
 import { isDemoMode } from '@/services/ordersService';
 import type { ActorRole, Order, OrderStatus, SyncStatus } from '@/types';
@@ -8,11 +8,16 @@ import { migrateOrders } from '@/utils/orderMigration';
 
 export const ORDERS_STORAGE_KEY = 'candys-paradise.orders.v1';
 
+/** Версия загруженного набора демо-заказов — чтобы обновлять его без дублей. */
+export const DEMO_SEED_VERSION_KEY = 'candys-paradise.demo-seed-version.v1';
+
 type Listener = (orders: Order[]) => void;
 
 let cache: Order[] | null = null;
 const listeners = new Set<Listener>();
 let storageBound = false;
+/** Кэш версии набора: localStorage может быть недоступен (приватный режим). */
+let seededVersion: number | null = null;
 
 function readStorage(): Order[] {
   if (typeof window === 'undefined') return [];
@@ -71,6 +76,30 @@ function persist(orders: Order[]): void {
   notify();
 }
 
+function readSeededVersion(): number | null {
+  if (seededVersion !== null) return seededVersion;
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem(DEMO_SEED_VERSION_KEY);
+    const parsed = raw === null ? Number.NaN : Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSeededVersion(version: number): void {
+  seededVersion = version;
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(DEMO_SEED_VERSION_KEY, String(version));
+  } catch {
+    // Приватный режим — версия хранится только в памяти.
+  }
+}
+
 function updateOrder(id: string, updater: (order: Order) => Order): Order {
   const orders = listSync();
   const target = orders.find((order) => order.id === id);
@@ -105,6 +134,20 @@ function matchesFilter(order: Order, filter: OrderFilter): boolean {
   return [order.number, order.customer.name, order.customer.phone, order.customer.email ?? ''].some(
     (value) => value.toLowerCase().includes(search),
   );
+}
+
+/**
+ * Заменяет предыдущий демо-набор новым, реальные заказы сохраняет.
+ * Общий порядок — по свежести, чтобы заказ клиента не оказался в конце списка.
+ */
+function replaceDemoOrders(): Order[] {
+  const real = listSync().filter((order) => !order.isDemo);
+  const demo = buildDemoOrders();
+
+  persist([...demo, ...real].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  writeSeededVersion(DEMO_DATA_VERSION);
+
+  return demo;
 }
 
 export const localOrderRepository: OrderRepository = {
@@ -187,10 +230,18 @@ export const localOrderRepository: OrderRepository = {
   },
 
   async seedDemo() {
-    // Демо-заказы заменяют предыдущий набор, реальные заказы не трогаем.
-    const real = listSync().filter((order) => !order.isDemo);
-    const demo = buildDemoOrders();
-    persist([...demo, ...real]);
-    return demo;
+    return replaceDemoOrders();
+  },
+
+  async ensureDemo() {
+    const current = listSync();
+    const hasDemoOrders = current.some((order) => order.isDemo);
+
+    // Набор уже загружен и не устарел — не трогаем статусы и заметки владельца.
+    if (hasDemoOrders && readSeededVersion() === DEMO_DATA_VERSION) {
+      return current.filter((order) => order.isDemo);
+    }
+
+    return replaceDemoOrders();
   },
 };

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoOrders } from '@/data/local/demoOrders';
+import { siteContent } from '@/references';
 import { addDays, startOfDay } from '@/utils/date';
 import { isActiveStatus } from '@/utils/orderStatus';
 
@@ -14,17 +15,24 @@ describe('buildDemoOrders', () => {
   const today = dayKey(now.toISOString());
   const todayOrders = orders.filter((order) => dayKey(order.createdAt) === today);
 
-  it('даёт 15 заказов: 10 доставленных за 5 предыдущих дней и 5 за сегодня', () => {
+  it('даёт 14 заказов: 10 доставленных за прошлые 5 дней и 4 за сегодня', () => {
     const fiveDaysAgo = dayKey(addDays(now, -5).toISOString());
     const pastOrders = orders.filter((order) => {
       const key = dayKey(order.createdAt);
       return key >= fiveDaysAgo && key < today;
     });
 
-    expect(orders).toHaveLength(15);
-    expect(todayOrders).toHaveLength(5);
+    expect(orders).toHaveLength(14);
+    expect(todayOrders).toHaveLength(4);
     expect(pastOrders).toHaveLength(10);
     expect(pastOrders.every((order) => order.status === 'completed')).toBe(true);
+    expect(new Set(pastOrders.map((order) => dayKey(order.createdAt))).size).toBe(5);
+  });
+
+  it('оставляет на сегодня 2 новые заявки и 2 заказа в работе', () => {
+    expect(todayOrders.filter((order) => order.status === 'new')).toHaveLength(2);
+    expect(todayOrders.filter((order) => order.status === 'confirmed')).toHaveLength(2);
+    expect(todayOrders.every((order) => isActiveStatus(order.status))).toBe(true);
   });
 
   it('считает выручку и прибыль по доставленным заказам', () => {
@@ -38,9 +46,19 @@ describe('buildDemoOrders', () => {
     });
   });
 
-  it('оставляет сегодняшние заказы в работе — статусы и оплату можно менять', () => {
-    expect(todayOrders).toHaveLength(5);
-    expect(todayOrders.every((order) => isActiveStatus(order.status))).toBe(true);
+  it('считает сумму и доставку по тем же правилам, что и оформление заказа', () => {
+    orders.forEach((order) => {
+      expect(order.total).toBe(order.subtotal + order.deliveryFee);
+
+      if (order.delivery.method !== 'delivery') {
+        expect(order.deliveryFee).toBe(0);
+        return;
+      }
+
+      expect(order.deliveryFee).toBe(
+        order.subtotal >= siteContent.delivery.freeFrom ? 0 : siteContent.delivery.fee,
+      );
+    });
   });
 
   it('не ставит события истории статусов в будущее', () => {
@@ -60,3 +78,4 @@ describe('buildDemoOrders', () => {
     expect(new Set(orders.map((order) => order.number)).size).toBe(orders.length);
   });
 });
+

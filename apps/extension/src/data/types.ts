@@ -44,4 +44,9 @@ export interface OrderRepository {
   updateSync(id: string, syncStatus: SyncStatus, syncError?: string): Promise<Order>;
   remove(id: string): Promise<void>;
   seedDemo?(): Promise<Order[]>;
+  /**
+   * Подкладывает демо-заказы, если в браузере их ещё нет или набор устарел
+   * (`DEMO_DATA_VERSION`). Реальные заказы не затрагиваются.
+   */
+  ensureDemo?(): Promise<Order[]>;
 }

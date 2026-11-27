@@ -16,6 +16,8 @@ interface OrdersContextValue {
   getOrder: (id: string) => Order | undefined;
   removeOrder: (orderId: string) => Promise<void>;
   seedDemo: () => Promise<void>;
+  /** Догружает демо-набор, если его нет или он устарел (реальные заказы не трогает). */
+  ensureDemo: () => Promise<void>;
 }
 
 const OrdersContext = createContext<OrdersContextValue | null>(null);
@@ -107,6 +109,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     setOrders(orderRepository.listSync());
   }, []);
 
+  const ensureDemo = useCallback(async () => {
+    await orderRepository.ensureDemo?.();
+    setOrders(orderRepository.listSync());
+  }, []);
+
   const getOrder = useCallback((id: string) => orders.find((order) => order.id === id), [orders]);
 
   const value = useMemo(
@@ -120,6 +127,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       getOrder,
       removeOrder,
       seedDemo,
+      ensureDemo,
     }),
     [
       orders,
@@ -131,6 +139,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       getOrder,
       removeOrder,
       seedDemo,
+      ensureDemo,
     ],
   );
 
