@@ -47,6 +47,11 @@ export function useCakeBuilder(initialConfig?: CakeConfig) {
     setConfig(createDefaultConfig());
   }, []);
 
+  /** Применить готовый состав (например, рекомендацию помощника). */
+  const applyConfig = useCallback((next: CakeConfig) => {
+    setConfig(next);
+  }, []);
+
   return {
     config,
     price,
@@ -58,5 +63,6 @@ export function useCakeBuilder(initialConfig?: CakeConfig) {
     toggleDecoration,
     setInscription,
     reset,
+    applyConfig,
   };
 }

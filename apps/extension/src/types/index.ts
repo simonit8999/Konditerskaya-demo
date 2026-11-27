@@ -22,6 +22,8 @@ export interface CakeBase {
   extraPrice: number;
   description: string;
   palette: { tier: string; accent: string };
+  /** Аллергены и ограничения: gluten, lactose, eggs, honey… */
+  allergens?: string[];
 }
 
 export interface CakeFilling {
@@ -30,6 +32,7 @@ export interface CakeFilling {
   extraPrice: number;
   description: string;
   palette: { filling: string };
+  allergens?: string[];
 }
 
 export interface CakeCream {
@@ -38,6 +41,7 @@ export interface CakeCream {
   extraPrice: number;
   description: string;
   palette: { cream: string };
+  allergens?: string[];
 }
 
 export type DecorationPreviewType = 'berries' | 'figures' | 'sprinkles' | 'fondant' | 'cream';
@@ -48,6 +52,7 @@ export interface CakeDecoration {
   price: number;
   description: string;
   preview: { type: DecorationPreviewType };
+  allergens?: string[];
 }
 
 export interface CakePricing {
@@ -96,10 +101,20 @@ export interface CartItem {
 
 export type DeliveryMethod = 'delivery' | 'pickup';
 
+/** Канал связи, который клиент указал дополнительно к телефону. */
+export type ContactChannel = 'telegram' | 'whatsapp' | 'instagram' | 'vk' | 'other';
+
+export interface ContactHandle {
+  channel: ContactChannel;
+  handle: string;
+}
+
 export interface CustomerInfo {
   name: string;
   phone: string;
   email?: string;
+  /** Необязательный ник в мессенджере — если клиенту так удобнее. */
+  contact?: ContactHandle;
 }
 
 export interface DeliveryInfo {
@@ -107,6 +122,10 @@ export interface DeliveryInfo {
   date: string;
   timeSlot: string;
   address?: string;
+  /**
+   * Устаревшее поле: до версии с кабинетом владельца комментарий хранился здесь.
+   * Оставлено для чтения старых заказов, новые пишутся в Order.comment.
+   */
   comment?: string;
 }
 
@@ -119,7 +138,31 @@ export interface OrderItem {
   composition: string[];
 }
 
-export type OrderStatus = 'new' | 'processing' | 'ready' | 'delivered';
+export type OrderStatus = 'new' | 'confirmed' | 'ready' | 'completed' | 'declined';
+
+/** Кто изменил статус заказа. */
+export type ActorRole = 'customer' | 'owner' | 'system';
+
+export interface OrderStatusEvent {
+  status: OrderStatus;
+  at: string;
+  actor: ActorRole;
+  note?: string;
+}
+
+/**
+ * Снимок себестоимости и прибыли на момент оформления.
+ * Хранится в заказе, чтобы изменение ставок в business.json
+ * не переписывало историю задним числом.
+ */
+export interface OrderFinance {
+  itemsCost: number;
+  packagingCost: number;
+  deliveryCost: number;
+  costTotal: number;
+  profit: number;
+  marginPercent: number;
+}
 
 /** Как заказ ушёл кондитеру. */
 export type SyncStatus = 'sent' | 'demo' | 'failed';
@@ -137,6 +180,57 @@ export interface Order {
   createdAt: string;
   syncStatus: SyncStatus;
   syncError?: string;
+  /** Комментарий клиента на уровне заказа (аллергии, декор, звонок). */
+  comment?: string;
+  finance: OrderFinance;
+  statusHistory: OrderStatusEvent[];
+  confirmedAt?: string;
+  readyAt?: string;
+  completedAt?: string;
+  declinedAt?: string;
+  ownerNote?: string;
+  /** Демо-заказ из кабинета владельца — чтобы не смешивать с реальными. */
+  isDemo?: boolean;
+}
+
+export type NotificationAudience = 'customer' | 'owner';
+
+export type NotificationType =
+  | 'order_created'
+  | 'order_confirmed'
+  | 'order_ready'
+  | 'order_completed'
+  | 'order_declined'
+  | 'order_note';
+
+export interface OrderNotification {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  audience: NotificationAudience;
+  type: NotificationType;
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt?: string;
+}
+
+/** Настройки кондитерской: владелец, PIN демо-кабинета и ставки себестоимости. */
+export interface BusinessSettings {
+  owner: {
+    name: string;
+    title: string;
+    pin: string;
+  };
+  finance: {
+    /** Доля себестоимости ингредиентов от цены позиции (0…1). */
+    defaultCostRate: number;
+    packagingCostPerItem: number;
+    deliveryCost: number;
+  };
+  admin: {
+    demoSeed: boolean;
+  };
 }
 
 export interface SendOrderResult {

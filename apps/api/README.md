@@ -49,6 +49,31 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8787/api/send-order `
   -Body '{"number":"КР-100001","items":[{"title":"Торт 2 кг","price":7100,"composition":["Вес: 2 кг"]}],"customer":{"name":"Демо","phone":"+79990000000"},"delivery":{"method":"pickup","date":"2026-12-01","timeSlot":"12:00–14:00"},"total":7100}'
 ```
 
+## Будущие эндпоинты и БД
+
+Сейчас API умеет только `/health` и `POST /api/send-order`. Целевая схема
+PostgreSQL, RLS и план миграции localStorage описаны в
+[`docs/database-schema.md`](../../docs/database-schema.md).
+
+Планируемые маршруты:
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| `POST` | `/api/orders` | Создание заказа, идемпотентно по `client_id` |
+| `GET` | `/api/orders` | Список заказов владельца |
+| `PATCH` | `/api/orders/:id/status` | Статус + событие истории + уведомление |
+| `PATCH` | `/api/orders/:id/note` | Заметка владельца |
+| `GET` | `/api/notifications` | Уведомления роли |
+| `PATCH` | `/api/notifications/:id/read` | Отметка о прочтении |
+| `POST` | `/api/owner/session` | Вход владельца, JWT |
+
+Когда API появится, на клиенте включается `VITE_DATA_SOURCE=http` — страницы
+переключатся с localStorage на HTTP-репозиторий без правок UI. До этого
+`data/http/orderRepository.ts` остаётся заглушкой с понятной ошибкой.
+
+`formatOrder.mjs` уже поддерживает комментарий на уровне заказа и
+необязательный мессенджер клиента (кликабельная ссылка в Telegram).
+
 ## Продакшен
 
 Токен бота нельзя хранить на GitHub Pages. Разворачивайте `apps/api` на любом

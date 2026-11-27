@@ -37,7 +37,13 @@ export type IconName =
   | 'download'
   | 'star'
   | 'info'
-  | 'edit';
+  | 'edit'
+  | 'bell'
+  | 'chart'
+  | 'wallet'
+  | 'user'
+  | 'ban'
+  | 'chat';
 
 const ICONS: Record<IconName, ReactNode> = {
   cake: (
@@ -203,6 +209,43 @@ const ICONS: Record<IconName, ReactNode> = {
     <>
       <path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4Z" />
       <path d="m13.5 6.5 4 4" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6Z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </>
+  ),
+  chart: (
+    <>
+      <path d="M4 20h16" />
+      <path d="M7 20v-7M12 20V6M17 20v-4" />
+    </>
+  ),
+  wallet: (
+    <>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 10h18" />
+      <path d="M16 14.5h2" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </>
+  ),
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m6 6 12 12" />
+    </>
+  ),
+  chat: (
+    <>
+      <path d="M20 11.5a7.5 7.5 0 0 1-10.9 6.7L4 20l1.8-4.4A7.5 7.5 0 1 1 20 11.5Z" />
+      <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" />
     </>
   ),
 };

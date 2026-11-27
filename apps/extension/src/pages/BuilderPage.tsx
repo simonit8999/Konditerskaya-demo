@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { CakeAssistant } from '@/components/assistant/CakeAssistant';
 import { CakePreview } from '@/components/cake/CakePreview';
 import { OptionCard, OptionGroup } from '@/components/cake/OptionGroup';
 import { PriceSummary } from '@/components/cake/PriceSummary';
@@ -20,10 +22,20 @@ export function BuilderPage() {
   const navigate = useNavigate();
   const { getItem, addItem, updateItem } = useCart();
   const { showToast } = useToast();
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const editing = editId ? getItem(editId) : undefined;
-  const { config, price, setSize, setBase, setFilling, setCream, toggleDecoration, setInscription } =
-    useCakeBuilder(editing?.config);
+  const {
+    config,
+    price,
+    setSize,
+    setBase,
+    setFilling,
+    setCream,
+    toggleDecoration,
+    setInscription,
+    applyConfig,
+  } = useCakeBuilder(editing?.config);
 
   const handleSubmit = () => {
     if (editing) {
@@ -54,7 +66,13 @@ export function BuilderPage() {
             Выберите основу, начинку, декор и добавьте надпись. Цена рассчитается автоматически.
           </p>
         </div>
-        {editing && <Badge tone="mint">Режим редактирования</Badge>}
+        <div className="flex flex-wrap items-center gap-2">
+          {editing && <Badge tone="mint">Режим редактирования</Badge>}
+          <Button variant="outline" size="sm" onClick={() => setAssistantOpen(true)}>
+            <Icon name="sparkle" className="size-4" />
+            Помогите выбрать
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -197,6 +215,15 @@ export function BuilderPage() {
           </Button>
         </div>
       </div>
+
+      <CakeAssistant
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onApply={(nextConfig) => {
+          applyConfig(nextConfig);
+          showToast('Состав перенесён в конструктор');
+        }}
+      />
     </div>
   );
 }

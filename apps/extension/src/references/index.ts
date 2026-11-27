@@ -1,4 +1,5 @@
-import type { CakeConfig, CakeData, SiteContent } from '@/types';
+import type { BusinessSettings, CakeConfig, CakeData, SiteContent } from '@/types';
+import businessJson from './business.json';
 import cakeDataJson from './cakeData.json';
 import siteContentJson from './siteContent.json';
 
@@ -10,6 +11,9 @@ export const cakeData = cakeDataJson as unknown as CakeData;
 
 /** Контент витрины: тексты, галерея, контакты, доставка, юридические тексты. */
 export const siteContent = siteContentJson as unknown as SiteContent;
+
+/** Настройки кондитерской: владелец, PIN демо-кабинета, ставки себестоимости. */
+export const businessSettings = businessJson as unknown as BusinessSettings;
 
 /**
  * Стартовый состав торта: 2 кг (хит) + ягодная начинка,

@@ -115,6 +115,11 @@ export function Footer() {
                 Мы на карте
               </a>
             </li>
+            <li>
+              <Link to="/admin" className="text-ink/70 transition-colors hover:text-caramel-dark">
+                Кабинет владельца
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

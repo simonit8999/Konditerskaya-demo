@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Icon } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
 import { Modal } from '@/components/ui/Modal';
@@ -53,6 +54,8 @@ export function Header() {
               Установить
             </button>
           )}
+
+          <NotificationBell />
 
           <NavLink
             to="/orders"

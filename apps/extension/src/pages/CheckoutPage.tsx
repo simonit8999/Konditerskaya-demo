@@ -13,8 +13,10 @@ import { useCart } from '@/hooks/useCart';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/useToast';
 import { siteContent } from '@/references';
-import type { DeliveryMethod, OrderItem } from '@/types';
+import type { ContactChannel, DeliveryMethod, OrderItem } from '@/types';
 import { describeCake } from '@/utils/cake';
+import { CONTACT_CHANNELS } from '@/utils/messenger';
+import { COMMENT_MAX_LENGTH, COMMENT_PRESETS } from '@/utils/orderComment';
 import {
   validateCheckout,
   type CheckoutErrors,
@@ -24,6 +26,10 @@ import { formatDateRu, minOrderDate, toISODate } from '@/utils/date';
 import { formatPrice } from '@/utils/formatPrice';
 import { formatPhone, PHONE_PLACEHOLDER } from '@/utils/phone';
 import { cn } from '@/utils/cn';
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export function CheckoutPage() {
   const { delivery } = siteContent;
@@ -38,6 +44,8 @@ export function CheckoutPage() {
     name: '',
     phone: '',
     email: '',
+    contactChannel: '',
+    contactHandle: '',
     method: 'delivery',
     date: earliestDate,
     timeSlot: delivery.timeSlots[0] ?? '',
@@ -46,6 +54,7 @@ export function CheckoutPage() {
     consent: false,
   });
   const [errors, setErrors] = useState<CheckoutErrors>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const deliveryFee =
     values.method === 'delivery' && subtotal < delivery.freeFrom ? delivery.fee : 0;
@@ -59,7 +68,34 @@ export function CheckoutPage() {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const selectContactChannel = (channel: ContactChannel | '') => {
+    setValues((prev) => ({
+      ...prev,
+      contactChannel: channel,
+      contactHandle: channel ? prev.contactHandle : '',
+    }));
+    setErrors((prev) => ({ ...prev, contactChannel: undefined, contactHandle: undefined }));
+  };
+
+  const toggleCommentPreset = (text: string) => {
+    setValues((prev) => {
+      const active = prev.comment.toLowerCase().includes(text.toLowerCase());
+      const next = active
+        ? prev.comment
+            .replace(new RegExp(escapeRegExp(text), 'gi'), '')
+            .replace(/\s*,\s*,/g, ',')
+            .replace(/^[\s,]+|[\s,]+$/g, '')
+            .trim()
+        : prev.comment.trim()
+          ? `${prev.comment.trim()}, ${text}`
+          : text;
+
+      return { ...prev, comment: next.slice(0, COMMENT_MAX_LENGTH) };
+    });
+    setErrors((prev) => ({ ...prev, comment: undefined }));
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextErrors = validateCheckout(values, { minLeadHours: delivery.minLeadHours });
@@ -81,27 +117,39 @@ export function CheckoutPage() {
       };
     });
 
-    const order = placeOrder({
-      items: orderItems,
-      customer: {
-        name: values.name.trim(),
-        phone: values.phone.trim(),
-        email: values.email.trim() || undefined,
-      },
-      delivery: {
-        method: values.method,
-        date: values.date,
-        timeSlot: values.timeSlot,
-        address: values.method === 'delivery' ? values.address.trim() : undefined,
-        comment: values.comment.trim() || undefined,
-      },
-      subtotal,
-      deliveryFee,
-    });
+    setSubmitting(true);
 
-    clear();
-    showToast('Заказ оформлен — мы свяжемся с вами');
-    navigate(`/order/${order.id}`);
+    try {
+      const order = await placeOrder({
+        items: orderItems,
+        customer: {
+          name: values.name.trim(),
+          phone: values.phone.trim(),
+          email: values.email.trim() || undefined,
+          contact:
+            values.contactChannel && values.contactHandle.trim()
+              ? { channel: values.contactChannel, handle: values.contactHandle.trim() }
+              : undefined,
+        },
+        delivery: {
+          method: values.method,
+          date: values.date,
+          timeSlot: values.timeSlot,
+          address: values.method === 'delivery' ? values.address.trim() : undefined,
+        },
+        subtotal,
+        deliveryFee,
+        comment: values.comment.trim() || undefined,
+      });
+
+      clear();
+      showToast('Заказ оформлен — мы свяжемся с вами');
+      navigate(`/order/${order.id}`);
+    } catch {
+      showToast('Не удалось сохранить заказ — попробуйте ещё раз', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
@@ -173,6 +221,57 @@ export function CheckoutPage() {
                   autoComplete="email"
                   hint="Пришлём подтверждение заказа, если укажете"
                 />
+              </div>
+
+              <div className="sm:col-span-2 rounded-2xl border border-line bg-cream-100/60 p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="field-label mb-0">Мессенджер (необязательно)</span>
+                  <span className="text-[11px] text-ink/50">
+                    Телефон уже есть — это дополнительный канал
+                  </span>
+                </div>
+
+                <div
+                  className="mt-2 flex flex-wrap gap-1.5"
+                  role="radiogroup"
+                  aria-label="Мессенджер для связи"
+                >
+                  {[{ id: '' as const, label: 'Не нужно' }, ...CONTACT_CHANNELS].map((channel) => (
+                    <button
+                      key={channel.id || 'none'}
+                      type="button"
+                      role="radio"
+                      aria-checked={values.contactChannel === channel.id}
+                      onClick={() => selectContactChannel(channel.id as ContactChannel | '')}
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                        values.contactChannel === channel.id
+                          ? 'border-caramel bg-gold/20 text-cocoa'
+                          : 'border-line bg-cream-50 text-ink/70 hover:border-caramel/40',
+                      )}
+                    >
+                      {channel.label}
+                    </button>
+                  ))}
+                </div>
+
+                {values.contactChannel && (
+                  <div className="mt-3">
+                    <Input
+                      label="Ваш юзернейм / ник"
+                      placeholder={
+                        CONTACT_CHANNELS.find((channel) => channel.id === values.contactChannel)
+                          ?.placeholder
+                      }
+                      value={values.contactHandle}
+                      onChange={(event) => update('contactHandle', event.target.value)}
+                      error={errors.contactHandle}
+                      maxLength={64}
+                      autoComplete="off"
+                      hint="Необязательно. Если удобнее общаться в мессенджере — оставьте ник, и кондитер напишет туда."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -279,15 +378,53 @@ export function CheckoutPage() {
           </section>
 
           <section className="rounded-3xl border border-line bg-cream-50/80 p-5 shadow-innerLine">
-            <h2 className="font-display text-lg text-cocoa">3. Пожелания</h2>
+            <h2 className="font-display text-lg text-cocoa">3. Комментарий к заказу</h2>
+            <p className="mt-2 text-xs leading-relaxed text-ink/60">
+              Напишите всё, что важно знать кондитеру: аллергии (орехи, лактоза, глютен),
+              ограничения по декору и красителям, пожелания к надписи, свечи, время звонка.
+            </p>
+
             <div className="mt-4">
               <Textarea
-                label="Комментарии к заказу"
-                placeholder="Например: без орехов, свечи на 30, позвонить за час"
+                label="Что важно учесть"
+                placeholder="Например: аллергия на орехи, без мастики, свечи «30», позвонить за час до доставки"
                 value={values.comment}
                 onChange={(event) => update('comment', event.target.value)}
-                maxLength={500}
+                maxLength={COMMENT_MAX_LENGTH}
+                error={errors.comment}
               />
+
+              <div className="mt-1.5 flex items-start justify-between gap-3">
+                <p className="field-hint mt-0">
+                  Чем точнее опишете ограничения, тем спокойнее будет и вам, и кондитеру.
+                </p>
+                <span className="shrink-0 text-[11px] tabular-nums text-ink/45">
+                  {values.comment.length}/{COMMENT_MAX_LENGTH}
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {COMMENT_PRESETS.map((preset) => {
+                  const active = values.comment.toLowerCase().includes(preset.text.toLowerCase());
+
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleCommentPreset(preset.text)}
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                        active
+                          ? 'border-caramel bg-gold/20 text-cocoa'
+                          : 'border-line bg-cream-50 text-ink/70 hover:border-caramel/40',
+                      )}
+                    >
+                      <span aria-hidden="true">{active ? '✓' : '+'}</span> {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="mt-4 rounded-2xl bg-cream-100 px-4 py-3 text-xs leading-relaxed text-ink/70">
               <p className="flex items-center gap-1.5 font-semibold text-cocoa">
@@ -316,9 +453,9 @@ export function CheckoutPage() {
                 </span>
               }
             />
-            <Button type="submit" size="lg" fullWidth>
+            <Button type="submit" size="lg" fullWidth disabled={submitting}>
               <Icon name="check" className="size-5" />
-              Подтвердить заказ · {formatPrice(total)}
+              {submitting ? 'Сохраняем заказ…' : `Подтвердить заказ · ${formatPrice(total)}`}
             </Button>
             <p className="text-center text-[11px] leading-relaxed text-ink/50">
               Мы не берём предоплату. Заказ уйдёт кондитеру в Telegram.

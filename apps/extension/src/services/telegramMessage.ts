@@ -1,6 +1,8 @@
 import type { Order } from '@/types';
 import { formatDateRu } from '@/utils/date';
 import { formatPrice } from '@/utils/formatPrice';
+import { buildMessengerLink, describeContact } from '@/utils/messenger';
+import { getOrderComment } from '@/utils/orderComment';
 
 /**
  * Текст заказа для ручной отправки/копирования (fallback, если API недоступен
@@ -22,12 +24,22 @@ export function buildOrderText(order: Order): string {
   lines.push(`Клиент: ${customer.name}`);
   lines.push(`Телефон: ${customer.phone}`);
   if (customer.email) lines.push(`Email: ${customer.email}`);
+
+  if (customer.contact) {
+    const label = describeContact(customer.contact);
+    const link = buildMessengerLink(customer.contact);
+    lines.push(`Связь: ${label}${link ? ` (${link})` : ''}`);
+  }
+
   lines.push(
     delivery.method === 'delivery'
       ? `Доставка: ${delivery.address ?? 'адрес не указан'}`
       : 'Самовывоз из кондитерской',
   );
-  if (delivery.comment) lines.push(`Комментарий: ${delivery.comment}`);
+
+  const comment = getOrderComment(order);
+  if (comment) lines.push(`Комментарий: ${comment}`);
+
   lines.push(`Доставка: ${order.deliveryFee > 0 ? formatPrice(order.deliveryFee) : 'бесплатно'}`);
   lines.push(`Итого: ${formatPrice(order.total)}`);
 

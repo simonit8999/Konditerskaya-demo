@@ -38,6 +38,13 @@
       "name": "Доставка и оплата",
       "short_name": "Доставка",
       "url": "./#/delivery"
+    },
+    {
+      "name": "Кабинет владельца",
+      "short_name": "Кабинет",
+      "description": "Заказы, статусы и прибыль",
+      "url": "./#/admin",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "prefer_related_applications": false

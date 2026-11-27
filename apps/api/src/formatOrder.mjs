@@ -11,6 +11,46 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const CONTACT_LABELS = {
+  telegram: 'Telegram',
+  whatsapp: 'WhatsApp',
+  instagram: 'Instagram',
+  vk: 'VK',
+  other: 'Другое',
+};
+
+/** Кликабельная ссылка на мессенджер из необязательного contact клиента. */
+export function buildMessengerLink(contact) {
+  if (!contact || typeof contact.handle !== 'string') return null;
+
+  const raw = contact.handle.trim();
+  if (!raw) return null;
+
+  const nick = raw.replace(/^@+/, '');
+
+  switch (contact.channel) {
+    case 'telegram':
+      return nick ? `https://t.me/${encodeURIComponent(nick)}` : null;
+    case 'whatsapp': {
+      let digits = raw.replace(/\D/g, '');
+      if (digits.length === 11 && digits.startsWith('8')) digits = `7${digits.slice(1)}`;
+      return digits.length >= 10 ? `https://wa.me/${digits}` : null;
+    }
+    case 'instagram':
+      return nick ? `https://instagram.com/${encodeURIComponent(nick)}` : null;
+    case 'vk': {
+      const vkNick = nick.replace(/^https?:\/\/(www\.)?vk\.com\//i, '');
+      return vkNick ? `https://vk.com/${encodeURIComponent(vkNick)}` : null;
+    }
+    default:
+      return null;
+  }
+}
+
 function formatMoney(value) {
   return `${new Intl.NumberFormat('ru-RU').format(Math.round(Number(value) || 0))} ₽`;
 }
@@ -36,6 +76,16 @@ export function formatOrderMessage(order) {
   lines.push(`📞 ${escapeHtml(customer.phone)}`);
   if (customer.email) lines.push(`✉️ ${escapeHtml(customer.email)}`);
 
+  if (customer.contact?.handle) {
+    const label = `${CONTACT_LABELS[customer.contact.channel] ?? 'Связь'}: ${customer.contact.handle}`;
+    const link = buildMessengerLink(customer.contact);
+    lines.push(
+      link
+        ? `📱 <a href="${escapeAttr(link)}">${escapeHtml(label)}</a>`
+        : `📱 ${escapeHtml(label)}`,
+    );
+  }
+
   const delivery = order.delivery ?? {};
   if (delivery.method === 'delivery') {
     lines.push(`🚚 ${escapeHtml(delivery.address)}`);
@@ -44,7 +94,9 @@ export function formatOrderMessage(order) {
   }
   lines.push(`🗓 ${escapeHtml(delivery.date)} · ${escapeHtml(delivery.timeSlot)}`);
 
-  if (delivery.comment) lines.push(`💬 ${escapeHtml(delivery.comment)}`);
+  // Новые заказы хранят комментарий на уровне заказа, старые — в delivery.
+  const comment = order.comment || delivery.comment;
+  if (comment) lines.push(`💬 ${escapeHtml(comment)}`);
 
   lines.push('');
   lines.push(`Доставка: ${order.deliveryFee > 0 ? formatMoney(order.deliveryFee) : 'бесплатно'}`);

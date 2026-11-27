@@ -74,10 +74,23 @@ export function Hero() {
               <Icon name="cake" className="size-5" />
               {hero.ctaPrimary}
             </Link>
-            <a href="#gallery" className={buttonStyles('outline', 'lg')}>
+            {/*
+              Не <a href="#gallery">: приложение живёт на HashRouter, и браузер
+              воспринял бы такой хэш как маршрут /gallery (404). Скроллим секцию вручную.
+            */}
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById('gallery')?.scrollIntoView({
+                  behavior: reduceMotion ? 'auto' : 'smooth',
+                  block: 'start',
+                });
+              }}
+              className={buttonStyles('outline', 'lg')}
+            >
               {hero.ctaSecondary}
               <Icon name="arrowRight" className="size-4" />
-            </a>
+            </button>
           </motion.div>
 
           <motion.dl

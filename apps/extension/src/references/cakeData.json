@@ -44,21 +44,24 @@
       "label": "Бисквит",
       "extraPrice": 0,
       "description": "Лёгкий ванильный бисквит",
-      "palette": { "tier": "#F6E3C7", "accent": "#FFF8E1" }
+      "palette": { "tier": "#F6E3C7", "accent": "#FFF8E1" },
+      "allergens": ["gluten", "eggs", "lactose"]
     },
     {
       "id": "honey",
       "label": "Медовик",
       "extraPrice": 250,
       "description": "Тонкие коржи и сметанный крем",
-      "palette": { "tier": "#E8C79A", "accent": "#C68E17" }
+      "palette": { "tier": "#E8C79A", "accent": "#C68E17" },
+      "allergens": ["gluten", "eggs", "lactose", "honey"]
     },
     {
       "id": "mousse",
       "label": "Муссовый",
       "extraPrice": 600,
       "description": "Воздушный, с зеркальной глазурью",
-      "palette": { "tier": "#FFD1DC", "accent": "#E0F2F1" }
+      "palette": { "tier": "#FFD1DC", "accent": "#E0F2F1" },
+      "allergens": ["lactose", "eggs"]
     }
   ],
   "fillings": [
@@ -67,28 +70,32 @@
       "label": "Шоколадная",
       "extraPrice": 300,
       "description": "Бельгийский шоколад и какао",
-      "palette": { "filling": "#6B4A3A" }
+      "palette": { "filling": "#6B4A3A" },
+      "allergens": ["cocoa", "lactose"]
     },
     {
       "id": "berry",
       "label": "Ягодная",
       "extraPrice": 350,
       "description": "Малина, смородина, ягодный конфитюр",
-      "palette": { "filling": "#C43A5A" }
+      "palette": { "filling": "#C43A5A" },
+      "allergens": ["berries"]
     },
     {
       "id": "caramel",
       "label": "Карамельная",
       "extraPrice": 280,
       "description": "Солёная карамель и сливки",
-      "palette": { "filling": "#C68E17" }
+      "palette": { "filling": "#C68E17" },
+      "allergens": ["lactose"]
     },
     {
       "id": "fruit",
       "label": "Фруктовая",
       "extraPrice": 320,
       "description": "Персик, манго, цитрусы",
-      "palette": { "filling": "#E9A23B" }
+      "palette": { "filling": "#E9A23B" },
+      "allergens": ["fruit"]
     }
   ],
   "creams": [
@@ -97,28 +104,32 @@
       "label": "Сливочный",
       "extraPrice": 0,
       "description": "Классика на сливках 33%",
-      "palette": { "cream": "#FFF8E1" }
+      "palette": { "cream": "#FFF8E1" },
+      "allergens": ["lactose"]
     },
     {
       "id": "curd",
       "label": "Творожный",
       "extraPrice": 200,
       "description": "Нежный, с ванилью",
-      "palette": { "cream": "#FBF3E4" }
+      "palette": { "cream": "#FBF3E4" },
+      "allergens": ["lactose"]
     },
     {
       "id": "choco",
       "label": "Шоколадный",
       "extraPrice": 250,
       "description": "Плотный ганаш",
-      "palette": { "cream": "#5A3A3A" }
+      "palette": { "cream": "#5A3A3A" },
+      "allergens": ["lactose", "cocoa"]
     },
     {
       "id": "cheese",
       "label": "Сырный",
       "extraPrice": 350,
       "description": "Крем-чиз на сливочном сыре",
-      "palette": { "cream": "#FFFDF6" }
+      "palette": { "cream": "#FFFDF6" },
+      "allergens": ["lactose"]
     }
   ],
   "decorations": [
@@ -127,35 +138,40 @@
       "label": "Свежие ягоды",
       "price": 450,
       "description": "Малина, ежевика, голубика",
-      "preview": { "type": "berries" }
+      "preview": { "type": "berries" },
+      "allergens": ["berries"]
     },
     {
       "id": "figures",
       "label": "Шоколадные фигурки",
       "price": 350,
       "description": "Топперы и фигурки из шоколада",
-      "preview": { "type": "figures" }
+      "preview": { "type": "figures" },
+      "allergens": ["cocoa", "soy"]
     },
     {
       "id": "sprinkles",
       "label": "Кондитерская посыпка",
       "price": 150,
       "description": "Жемчужная и золотая пыль",
-      "preview": { "type": "sprinkles" }
+      "preview": { "type": "sprinkles" },
+      "allergens": ["dyes", "sugar"]
     },
     {
       "id": "fondant",
       "label": "Мастика",
       "price": 600,
       "description": "Фигурки и надписи из мастики",
-      "preview": { "type": "fondant" }
+      "preview": { "type": "fondant" },
+      "allergens": ["dyes", "sugar", "fondant"]
     },
     {
       "id": "creamDecor",
       "label": "Кремовый декор",
       "price": 400,
       "description": "Розы, бордюры, завитки",
-      "preview": { "type": "cream" }
+      "preview": { "type": "cream" },
+      "allergens": ["lactose", "dyes"]
     }
   ]
 }

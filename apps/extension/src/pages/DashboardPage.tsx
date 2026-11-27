@@ -5,37 +5,57 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { Modal } from '@/components/ui/Modal';
 import { useCart } from '@/hooks/useCart';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useOrders } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/useToast';
-import { siteContent } from '@/references';
-import type { Order } from '@/types';
+import type { ContactHandle, Order } from '@/types';
 import { formatDateRu, formatDateTimeRu } from '@/utils/date';
 import { formatPrice } from '@/utils/formatPrice';
+import { buildMessengerLink, describeContact } from '@/utils/messenger';
+import { getOrderComment } from '@/utils/orderComment';
 import {
-  NEXT_STATUS,
+  isActiveStatus,
+  ORDER_STATUS_CUSTOMER_TEXT,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_STYLES,
   SYNC_STATUS_LABELS,
 } from '@/utils/orderStatus';
 import { cn } from '@/utils/cn';
 
-type Tab = 'active' | 'done';
+type Tab = 'active' | 'completed' | 'declined';
+
+function ContactLink({ contact }: { contact: ContactHandle }) {
+  const label = describeContact(contact);
+  const link = buildMessengerLink(contact);
+
+  return link ? (
+    <a href={link} target="_blank" rel="noreferrer" className="link-underline">
+      {label}
+    </a>
+  ) : (
+    <span>{label}</span>
+  );
+}
 
 /** Кабинет заказчика: активные и завершённые заказы, детали, повтор заказа. */
 export function DashboardPage() {
-  const { orders, retrySend, updateStatus, removeOrder } = useOrders();
+  const { orders, retrySend, removeOrder } = useOrders();
   const { addItem } = useCart();
   const { showToast } = useToast();
+  const { notifications, markRead, unreadCount } = useNotifications('customer');
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<Tab>('active');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
-  const activeOrders = orders.filter((order) => order.status !== 'delivered');
-  const doneOrders = orders.filter((order) => order.status === 'delivered');
-  const list = tab === 'active' ? activeOrders : doneOrders;
+  const activeOrders = orders.filter((order) => isActiveStatus(order.status));
+  const completedOrders = orders.filter((order) => order.status === 'completed');
+  const declinedOrders = orders.filter((order) => order.status === 'declined');
+  const list =
+    tab === 'active' ? activeOrders : tab === 'completed' ? completedOrders : declinedOrders;
   const selected = selectedId ? orders.find((order) => order.id === selectedId) : undefined;
+  const latestUnread = notifications.find((item) => !item.readAt);
 
   const handleRepeat = (order: Order) => {
     order.items.forEach((item) => addItem(item.config));
@@ -81,7 +101,8 @@ export function DashboardPage() {
             id: 'active' as Tab,
             label: activeOrders.length > 0 ? `Активные · ${activeOrders.length}` : 'Активные',
           },
-          { id: 'done' as Tab, label: 'Завершённые' },
+          { id: 'completed' as Tab, label: 'Завершённые' },
+          { id: 'declined' as Tab, label: 'Отменённые' },
         ].map((item) => (
           <button
             key={item.id}
@@ -99,15 +120,43 @@ export function DashboardPage() {
         ))}
       </div>
 
+      {latestUnread && (
+        <div className="mt-5 flex items-start gap-3 rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3">
+          <Icon name="bell" className="mt-0.5 size-4 shrink-0 text-caramel-dark" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-cocoa">{latestUnread.title}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-ink/70">{latestUnread.body}</p>
+            {unreadCount > 1 && (
+              <p className="mt-1 text-[11px] text-ink/50">Ещё непрочитанных: {unreadCount - 1}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => markRead(latestUnread.id)}
+            className="shrink-0 rounded-full border border-caramel/40 px-2.5 py-1 text-[11px] font-semibold text-caramel-dark transition-colors hover:bg-cream-200/70"
+          >
+            Прочитано
+          </button>
+        </div>
+      )}
+
       {list.length === 0 ? (
         <EmptyState
           className="mt-6"
           icon="gift"
-          title={tab === 'active' ? 'Активных заказов нет' : 'Завершённых заказов нет'}
+          title={
+            tab === 'active'
+              ? 'Активных заказов нет'
+              : tab === 'completed'
+                ? 'Завершённых заказов нет'
+                : 'Отменённых заказов нет'
+          }
           text={
             tab === 'active'
               ? 'Оформите первый заказ — он появится здесь со статусом «Новый», даже если интернет пропадёт.'
-              : 'Когда заказ будет доставлен, он переедет в этот список.'
+              : tab === 'completed'
+                ? 'Когда заказ будет готов и получен, он переедет в этот список.'
+                : 'Здесь появятся заказы, которые не удалось подтвердить.'
           }
           action={
             <Link to="/builder" className={buttonStyles('primary', 'md')}>
@@ -122,7 +171,12 @@ export function DashboardPage() {
             <li key={order.id}>
               <button
                 type="button"
-                onClick={() => setSelectedId(order.id)}
+                onClick={() => {
+                  setSelectedId(order.id);
+                  notifications
+                    .filter((item) => item.orderId === order.id && !item.readAt)
+                    .forEach((item) => markRead(item.id));
+                }}
                 className="w-full rounded-3xl border border-line bg-cream-50 p-4 text-left shadow-card transition-all duration-200 ease-silk hover:-translate-y-0.5 hover:shadow-soft"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -135,6 +189,11 @@ export function DashboardPage() {
                     <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink/75">
                       {order.items.map((item) => item.title).join(', ')}
                     </p>
+                    {getOrderComment(order) && (
+                      <p className="mt-1.5 line-clamp-2 text-xs italic leading-relaxed text-ink/55">
+                        «{getOrderComment(order)}»
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <span
@@ -202,6 +261,10 @@ export function DashboardPage() {
               </p>
             </div>
 
+            <p className="rounded-2xl bg-cream-100 px-3.5 py-2.5 text-xs leading-relaxed text-ink/70">
+              {ORDER_STATUS_CUSTOMER_TEXT[selected.status]}
+            </p>
+
             <ul className="space-y-3">
               {selected.items.map((item) => (
                 <li key={item.id} className="rounded-2xl border border-line bg-cream-100/60 p-3">
@@ -241,10 +304,20 @@ export function DashboardPage() {
                   </span>
                 </dd>
               </div>
-              {selected.delivery.comment && (
+              {getOrderComment(selected) && (
                 <div className="flex justify-between gap-3">
                   <dt className="text-ink/60">Комментарий</dt>
-                  <dd className="max-w-[60%] text-right text-ink/80">{selected.delivery.comment}</dd>
+                  <dd className="max-w-[60%] whitespace-pre-line text-right text-ink/80">
+                    {getOrderComment(selected)}
+                  </dd>
+                </div>
+              )}
+              {selected.customer.contact && (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink/60">Мессенджер</dt>
+                  <dd className="max-w-[60%] text-right text-ink/80">
+                    <ContactLink contact={selected.customer.contact} />
+                  </dd>
                 </div>
               )}
               <div className="flex justify-between gap-3">
@@ -260,6 +333,23 @@ export function DashboardPage() {
                 </dd>
               </div>
             </dl>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink/45">
+                История статусов
+              </p>
+              <ol className="mt-2 space-y-1.5">
+                {selected.statusHistory.map((event, index) => (
+                  <li
+                    key={`${event.at}-${index}`}
+                    className="flex items-start justify-between gap-3 text-xs"
+                  >
+                    <span className="text-ink/75">{ORDER_STATUS_LABELS[event.status]}</span>
+                    <span className="shrink-0 text-ink/45">{formatDateTimeRu(event.at)}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
 
             <div className="rounded-2xl bg-cream-100 px-3.5 py-3 text-xs">
               <p className="flex items-center gap-1.5 font-semibold text-cocoa">
@@ -277,24 +367,18 @@ export function DashboardPage() {
                   <Icon name="telegram" className="size-3.5" />
                   {retrying ? 'Отправляем…' : 'Отправить повторно'}
                 </Button>
-                {NEXT_STATUS[selected.status] && siteContent.brand.isDemo && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => updateStatus(selected.id, NEXT_STATUS[selected.status]!)}
-                  >
-                    Демо-статус: {ORDER_STATUS_LABELS[NEXT_STATUS[selected.status]!]}
-                  </Button>
-                )}
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => {
-                removeOrder(selected.id);
-                setSelectedId(null);
-                showToast('Заказ удалён из истории', 'info');
+                void removeOrder(selected.id)
+                  .then(() => {
+                    setSelectedId(null);
+                    showToast('Заказ удалён из истории', 'info');
+                  })
+                  .catch(() => showToast('Не удалось удалить заказ', 'error'));
               }}
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-berry-dark transition-colors hover:underline"
             >

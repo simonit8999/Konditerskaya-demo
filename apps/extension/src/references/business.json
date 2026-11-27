@@ -1,0 +1,15 @@
+{
+  "owner": {
+    "name": "Анна",
+    "title": "Кабинет владельца",
+    "pin": "2468"
+  },
+  "finance": {
+    "defaultCostRate": 0.35,
+    "packagingCostPerItem": 60,
+    "deliveryCost": 150
+  },
+  "admin": {
+    "demoSeed": true
+  }
+}

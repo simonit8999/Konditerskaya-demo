@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { CartProvider } from '@/context/CartContext';
+import { NotificationsProvider } from '@/context/NotificationsContext';
 import { OrdersProvider } from '@/context/OrdersContext';
 import { ToastProvider } from '@/context/ToastContext';
 
@@ -26,6 +27,9 @@ const OrderSuccessPage = lazy(() =>
 );
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+);
+const AdminPage = lazy(() =>
+  import('@/pages/AdminPage').then((module) => ({ default: module.AdminPage })),
 );
 const AboutPage = lazy(() =>
   import('@/pages/AboutPage').then((module) => ({ default: module.AboutPage })),
@@ -54,23 +58,26 @@ export default function App() {
     <ToastProvider>
       <CartProvider>
         <OrdersProvider>
-          <HashRouter>
-            <Routes>
-              <Route element={<Layout />}>
-                <Route index element={<HomePage />} />
-                <Route path="builder" element={<BuilderPage />} />
-                <Route path="cart" element={<CartPage />} />
-                <Route path="checkout" element={<CheckoutPage />} />
-                <Route path="order/:id" element={<OrderSuccessPage />} />
-                <Route path="orders" element={<DashboardPage />} />
-                <Route path="about" element={<AboutPage />} />
-                <Route path="contacts" element={<ContactsPage />} />
-                <Route path="delivery" element={<DeliveryPage />} />
-                <Route path="privacy" element={<PrivacyPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </HashRouter>
+          <NotificationsProvider>
+            <HashRouter>
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="builder" element={<BuilderPage />} />
+                  <Route path="cart" element={<CartPage />} />
+                  <Route path="checkout" element={<CheckoutPage />} />
+                  <Route path="order/:id" element={<OrderSuccessPage />} />
+                  <Route path="orders" element={<DashboardPage />} />
+                  <Route path="admin" element={<AdminPage />} />
+                  <Route path="about" element={<AboutPage />} />
+                  <Route path="contacts" element={<ContactsPage />} />
+                  <Route path="delivery" element={<DeliveryPage />} />
+                  <Route path="privacy" element={<PrivacyPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </HashRouter>
+          </NotificationsProvider>
         </OrdersProvider>
       </CartProvider>
     </ToastProvider>

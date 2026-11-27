@@ -12,6 +12,9 @@ PWA-витрина с конструктором тортов для конди�
 - [Структура](#структура)
 - [Быстрый старт](#быстрый-старт)
 - [Где менять контент и цены](#где-менять-контент-и-цены)
+- [Кабинет владельца, статусы и уведомления](#кабинет-владельца-статусы-и-уведомления)
+- [Себестоимость и прибыль](#себестоимость-и-прибыль)
+- [Архитектура БД и ИИ-помощник](#архитектура-бд-и-ии-помощник)
 - [Интеграция с Telegram](#интеграция-с-telegram)
 - [PWA: манифест, service worker, офлайн](#pwa-манифест-service-worker-офлайн)
 - [Деплой на GitHub Pages](#деплой-на-github-pages)
@@ -42,15 +45,16 @@ PWA-витрина с конструктором тортов для конди�
 │  │  ├─ public/                 # manifest.json, service-worker.js, offline.html, icons/
 │  │  └─ src/
 │  │     ├─ assets/gallery/      # оптимизированные WebP + карта ассетов
-│  │     ├─ components/          # layout, ui, cake, home, cart, checkout, pwa
-│  │     ├─ context/             # Cart, Orders, Toast
-│  │     ├─ hooks/               # useCakeBuilder, useLocalStorage, useInstallPrompt…
-│  │     ├─ pages/               # Home, Builder, Cart, Checkout, Dashboard, статические
-│  │     ├─ references/          # cakeData.json + siteContent.json (источник данных)
-│  │     ├─ services/            # ordersService (Telegram/демо), pwaService, telegramMessage
+│  │     ├─ components/          # layout, ui, cake, home, cart, pwa, admin, notifications, assistant
+│  │     ├─ context/             # Cart, Orders, Notifications, Toast
+│  │     ├─ data/                # OrderRepository: localStorage-адаптер + HTTP-заглушка
+│  │     ├─ hooks/               # useCakeBuilder, useOrders, useOwnerSession, useNotifications…
+│  │     ├─ pages/               # Home, Builder, Cart, Checkout, Dashboard, Admin, статические
+│  │     ├─ references/          # cakeData.json, siteContent.json, business.json
+│  │     ├─ services/            # ordersService, telegramMessage, assistantService, pwaService
 │  │     ├─ styles/index.css     # Tailwind-слои, базовые стили, утилиты
 │  │     ├─ types/               # доменные типы (CakeConfig, Order, SiteContent…)
-│  │     └─ utils/               # цена, телефон, даты, валидация checkout + тесты
+│  │     └─ utils/               # цена, финансы, миграция, статусы, помощник + тесты
 │  ├─ api/                       # заглушка API: POST /api/send-order -> Telegram
 │  └─ references/                # README-заглушка под будущие статические артефакты
 ├─ scripts/
@@ -58,7 +62,10 @@ PWA-витрина с конструктором тортов для конди�
 │  ├─ optimize-images.mjs        # JPG -> WebP 800w/400w (sharp)
 │  ├─ smoke-api.mjs              # проверка /health и POST заказа
 │  └─ smoke-preview.mjs          # проверка собранной PWA через vite preview
-├─ docs/design-spec.md           # палитра, типографика, анимации, контент
+├─ docs/
+│  ├─ design-spec.md             # палитра, типографика, анимации, контент
+│  ├─ database-schema.md         # ER, PostgreSQL DDL, RLS, миграция localStorage
+│  └─ ai-cake-assistant.md       # спецификация ИИ-помощника, промпт, метрики
 ├─ assets-source/photos/         # исходные JPG (после npm run images)
 └─ .github/workflows/deploy.yml  # сборка и публикация на GitHub Pages
 ```
@@ -80,7 +87,7 @@ npm run dev:api      # (опционально) заглушка API: http://loc
 
 ```bash
 npm run typecheck    # tsc --noEmit для приложения и конфигов
-npm run test         # 19 unit-тестов (цена, маска, даты, состав)
+npm run test         # 46 unit-тестов (цена, финансы, миграция, валидация, помощник)
 npm run build        # production-сборка в apps/extension/dist
 node scripts/smoke-preview.mjs   # поднимает preview и проверяет PWA-файлы
 node scripts/smoke-api.mjs       # требует запущенный npm run dev:api
@@ -110,6 +117,67 @@ size.basePrice
 
 Чтобы добавить вариант, допишите объект в нужный массив `cakeData.json`
 (обязательны `id`, `label`, цены и `palette` для превью). Код менять не нужно.
+
+## Кабинет владельца, статусы и уведомления
+
+- `/admin` — кабинет владельца. Вход по PIN из `src/references/business.json`
+  (по умолчанию `2468`), сессия хранится в `sessionStorage`.
+- Статусы: `new → confirmed → ready → completed`, плюс `declined`.
+  Старые `processing` / `delivered` автоматически мигрируют при чтении.
+- Владелец подтверждает заказ, отмечает готовность и завершение, отклоняет,
+  возвращает в работу, оставляет заметку. В карточке видны состав, комментарий
+  клиента (с предупреждением об аллергенах), контакты, история и финансы.
+- Клиент видит статус, историю, комментарий и мессенджер; уведомления —
+  колокольчик в шапке, баннер на `/orders` и `/order/:id`, тосты.
+- Кнопка «Загрузить демо-заказы» в кабинете создаёт набор примеров, помеченных
+  бейджем «Демо»; реальные заказы не смешиваются и не удаляются.
+
+**Ограничения демо:** PIN — не настоящая защита, а без сервера кабинет видит
+только заказы этого браузера. Вкладки синхронизируются через событие `storage`,
+другие устройства — нет. Для реального клиента нужны API, БД и
+Telegram/email/push-уведомления.
+
+## Себестоимость и прибыль
+
+Ставки задаются в `src/references/business.json`:
+
+```json
+{
+  "finance": {
+    "defaultCostRate": 0.35,
+    "packagingCostPerItem": 60,
+    "deliveryCost": 150
+  }
+}
+```
+
+Формула — `src/utils/orderFinance.ts`:
+
+```
+себестоимость позиции = round(цена × defaultCostRate)
+упаковка             = packagingCostPerItem × количество позиций
+доставка             = deliveryCost, если способ «доставка»
+прибыль              = сумма заказа − итого себестоимость
+маржа, %             = прибыль / сумма заказа × 100
+```
+
+Снимок финансов сохраняется в заказе при оформлении: изменение ставок задним
+числом не переписывает историю. Это демо-расчёт, а не бухгалтерия — точная
+себестоимость по ингредиентам появится вместе с БД.
+
+## Архитектура БД и ИИ-помощник
+
+- `src/data/` — контракт `OrderRepository`, localStorage-адаптер и HTTP-заглушка.
+  Переключение источника: `VITE_DATA_SOURCE=http` (после появления API).
+- `docs/database-schema.md` — ER-диаграмма, PostgreSQL DDL, индексы, примеры RLS,
+  миграция localStorage и список будущих эндпоинтов.
+- `docs/ai-cake-assistant.md` — самостоятельная спецификация ИИ-помощника:
+  сценарий диалога, ветки, tool calling, JSON-контракт, системный промпт,
+  метрики, этапы и критерии приёмки.
+- Демо-виджет «Помогите выбрать» в конструкторе работает на правилах
+  (`src/utils/cakeAssistant.ts`), реальный LLM не подключён.
+- Аллергены добавлены в `cakeData.json` (`allergens` у основ, начинок, кремов и
+  декора) — их используют и помощник, и владелец.
 
 ## Интеграция с Telegram
 
@@ -241,15 +309,24 @@ npm run preview   # http://localhost:4173/candys-paradise/
 
 ## Ограничения демо-версии
 
-- **Нет авторизации:** «Мои заказы» — это `localStorage` текущего браузера,
-  заказы не синхронизируются между устройствами.
-- **Нет оплаты:** только статус «оплата при получении».
-- **Контакты, адрес и цены — плейсхолдеры** (`siteContent.json`, `cakeData.json`).
-- **Telegram** работает только при запущенном `apps/api` с токеном бота;
-  на статическом GitHub Pages включён демо-режим.
-- **Фотографии** — реальные работы кондитерской; на одном кадре есть водяной знак
-  (`@grisha_kryt`) — его стоит заменить чистым файлом.
-- Репозиторий готов к загрузке; после первого push один раз включите
-  **Settings → Pages → Source: GitHub Actions** (подробнее выше). `node_modules`
-  и `dist` в индекс не попадают (см. `.gitignore`).
+1. **Нет сервера и БД.** Кабинет владельца видит только заказы этого браузера,
+   уведомления не уходят на другие устройства. Схема и контракты готовы
+   (`docs/database-schema.md`), подключение — следующий этап.
+2. **PIN владельца — демо-защита.** Значение лежит в `business.json` и не
+   является авторизацией: настоящая роль/JWT появится с БД.
+3. **Уведомления — внутри приложения.** Между вкладками синхронизируются через
+   `storage`, но Telegram/email/push клиенту не отправляются.
+4. **Себестоимость — настраиваемые проценты**, а не точный расчёт по
+   ингредиентам. Владелец задаёт ставки в `business.json`.
+5. **ИИ-помощник работает на правилах.** Реальный LLM подключается по
+   `docs/ai-cake-assistant.md`; ключ API должен жить только на сервере.
+6. **Нет оплаты:** только статус «оплата при получении».
+7. **Контакты, адрес и цены — плейсхолдеры** (`siteContent.json`, `cakeData.json`).
+8. **Telegram** работает только при запущенном `apps/api` с токеном бота;
+   на статическом GitHub Pages включён демо-режим.
+9. **Фотографии** — реальные работы кондитерской; на одном кадре есть водяной
+   знак (`@grisha_kryt`) — его стоит заменить чистым файлом.
+10. Репозиторий готов к загрузке; после первого push один раз включите
+    **Settings → Pages → Source: GitHub Actions** (подробнее выше).
+    `node_modules` и `dist` в индекс не попадают (см. `.gitignore`).
 
