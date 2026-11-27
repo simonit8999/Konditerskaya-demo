@@ -20,16 +20,31 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Кондитерский Рай" />
 
-    <!-- Open Graph -->
+    <!-- Open Graph: абсолютные адреса подставляет плагин в vite.config.ts
+         (__OG_URL__ / __OG_IMAGE__), чтобы превью работало и из подпапки GitHub Pages. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Кондитерский Рай" />
+    <meta property="og:locale" content="ru_RU" />
     <meta property="og:title" content="Кондитерский Рай — торты в один клик от клиента" />
     <meta
       property="og:description"
       content="B2B-платформа онлайн-заказов для кондитерских: конструктор тортов, автоматический расчёт цены, заказы в Telegram."
     />
-    <meta property="og:image" content="icons/icon-512.png" />
-    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:image" content="__OG_IMAGE__" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Кондитерский Рай — конструктор тортов для кондитерских" />
+    <meta property="og:url" content="__OG_URL__" />
+    <link rel="canonical" href="__OG_URL__" />
+
+    <!-- Twitter/X и мессенджеры, которые читают twitter:*-теги -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Кондитерский Рай — торты в один клик от клиента" />
+    <meta
+      name="twitter:description"
+      content="B2B-платформа онлайн-заказов для кондитерских: конструктор тортов, автоматический расчёт цены, заказы в Telegram."
+    />
+    <meta name="twitter:image" content="__OG_IMAGE__" />
 
     <style>
       /* Фон до загрузки React — чтобы не было белой вспышки */

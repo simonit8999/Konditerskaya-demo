@@ -57,3 +57,43 @@ export function describeContact(contact?: ContactHandle): string {
   if (!contact || !contact.handle.trim()) return '';
   return `${CONTACT_CHANNEL_LABELS[contact.channel]}: ${contact.handle.trim()}`;
 }
+
+/**
+ * Ссылка на Telegram-профиль с готовым черновиком сообщения.
+ *
+ * `?text=` открывает чат с уже заполненным полем ввода — человеку остаётся
+ * нажать «Отправить». Это работает и в веб-версии, и в приложении.
+ */
+export function buildTelegramLink(handle: string, text?: string): string | null {
+  const nick = normalizeHandle(handle)
+    .replace(/^https?:\/\/(www\.)?(t\.me|telegram\.me)\//i, '')
+    .replace(/\/+$/, '');
+  if (!nick) return null;
+
+  const base = `https://t.me/${encodeURIComponent(nick)}`;
+  const message = text?.trim();
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
+
+/** Цифры номера в формате 7XXXXXXXXXX (8… → 7…, 10 цифр → +7…). */
+function toCountryDigits(phone: string): string {
+  let digits = phone.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('8')) digits = `7${digits.slice(1)}`;
+  if (digits.length === 10) digits = `7${digits}`;
+  return digits;
+}
+
+/**
+ * Ссылка на профиль в MAX по номеру телефона: https://max.ru/u/+79204045880.
+ * Формат проверен на веб-версии MAX: `u/` + номер в международном виде.
+ */
+export function buildMaxLink(phone: string): string | null {
+  const digits = toCountryDigits(phone);
+  return digits ? `https://max.ru/u/+${digits}` : null;
+}
+
+/** Ссылка «позвонить»: tel:+79204045880. */
+export function buildTelLink(phone: string): string | null {
+  const digits = toCountryDigits(phone);
+  return digits ? `tel:+${digits}` : null;
+}

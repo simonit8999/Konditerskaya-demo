@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AdminLogin } from '@/components/admin/AdminLogin';
 import { AdminOrderCard } from '@/components/admin/AdminOrderCard';
+import { CustomersTable } from '@/components/admin/CustomersTable';
 import { OrderDetailModal } from '@/components/admin/OrderDetailModal';
 import { RevenueChart } from '@/components/admin/RevenueChart';
 import { StatCards } from '@/components/admin/StatCards';
@@ -15,9 +16,11 @@ import { useToast } from '@/hooks/useToast';
 import { businessSettings } from '@/references';
 import type { OrderStatus } from '@/types';
 import { cn } from '@/utils/cn';
+import { aggregateCustomers } from '@/utils/customerStats';
 import { ORDER_STATUSES, ORDER_STATUS_LABELS } from '@/utils/orderStatus';
 
 type Filter = 'all' | OrderStatus;
+type AdminTab = 'orders' | 'customers';
 
 /** Кабинет владельца: KPI, график, заказы, статусы и прибыль. Демо-режим. */
 export function AdminPage() {
@@ -25,6 +28,7 @@ export function AdminPage() {
   const { orders, loading, updateStatus, updateNote, seedDemo } = useOrders();
   const { showToast } = useToast();
 
+  const [tab, setTab] = useState<AdminTab>('orders');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,11 +51,22 @@ export function AdminPage() {
   const countFor = (value: Filter) =>
     value === 'all' ? orders.length : orders.filter((order) => order.status === value).length;
 
+  const customerCount = aggregateCustomers(orders).length;
+
   const handleStatusChange = async (status: OrderStatus) => {
     if (!selected) return;
 
     try {
       await updateStatus(selected.id, status);
+      showToast(`Статус заказа: ${ORDER_STATUS_LABELS[status]}`);
+    } catch {
+      showToast('Не удалось изменить статус', 'error');
+    }
+  };
+
+  const handleQuickStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+      await updateStatus(orderId, status);
       showToast(`Статус заказа: ${ORDER_STATUS_LABELS[status]}`);
     } catch {
       showToast('Не удалось изменить статус', 'error');
@@ -127,35 +142,41 @@ export function AdminPage() {
       <section className="mt-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl text-cocoa">Заказы</h2>
-            <p className="mt-1 text-xs text-ink/55">Фильтры, поиск и действия по статусам.</p>
+            <h2 className="font-display text-xl text-cocoa">
+              {tab === 'orders' ? 'Заказы' : 'Клиенты'}
+            </h2>
+            <p className="mt-1 text-xs text-ink/55">
+              {tab === 'orders'
+                ? 'Фильтры, поиск и действия по статусам.'
+                : 'Кто заказывал, сколько потратил и когда последний раз.'}
+            </p>
           </div>
-          <div className="w-full sm:w-72">
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Поиск: номер, имя или телефон"
-              autoComplete="off"
-            />
-          </div>
+          {tab === 'orders' && (
+            <div className="w-full sm:w-72">
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Поиск: номер, имя или телефон"
+                autoComplete="off"
+              />
+            </div>
+          )}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Разделы кабинета">
           {[
-            { id: 'all' as Filter, label: 'Все' },
-            ...ORDER_STATUSES.map((status) => ({
-              id: status as Filter,
-              label: ORDER_STATUS_LABELS[status],
-            })),
+            { id: 'orders' as AdminTab, label: 'Заказы', count: orders.length },
+            { id: 'customers' as AdminTab, label: 'Клиенты', count: customerCount },
           ].map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => setFilter(item.id)}
-              aria-pressed={filter === item.id}
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                filter === item.id
+                tab === item.id
                   ? 'border-caramel bg-gold/20 text-cocoa'
                   : 'border-line bg-cream-50 text-ink/70 hover:border-caramel/40',
               )}
@@ -164,38 +185,80 @@ export function AdminPage() {
               <span
                 className={cn(
                   'rounded-full px-1.5 text-[10px]',
-                  filter === item.id
+                  tab === item.id
                     ? 'bg-caramel/15 text-caramel-dark'
                     : 'bg-cream-200 text-ink/55',
                 )}
               >
-                {countFor(item.id)}
+                {item.count}
               </span>
             </button>
           ))}
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            className="mt-5"
-            icon="gift"
-            title={orders.length === 0 ? 'Заказов пока нет' : 'Ничего не найдено'}
-            text={
-              orders.length === 0
-                ? 'Оформите заказ в конструкторе или загрузите демо-заказы, чтобы увидеть кабинет в работе.'
-                : 'Попробуйте изменить фильтр или поисковый запрос.'
-            }
-          />
+        {tab === 'customers' ? (
+          <CustomersTable orders={orders} />
         ) : (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {filtered.map((order) => (
-              <AdminOrderCard
-                key={order.id}
-                order={order}
-                onOpen={() => setSelectedId(order.id)}
+          <>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[
+                { id: 'all' as Filter, label: 'Все' },
+                ...ORDER_STATUSES.map((status) => ({
+                  id: status as Filter,
+                  label: ORDER_STATUS_LABELS[status],
+                })),
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilter(item.id)}
+                  aria-pressed={filter === item.id}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    filter === item.id
+                      ? 'border-caramel bg-gold/20 text-cocoa'
+                      : 'border-line bg-cream-50 text-ink/70 hover:border-caramel/40',
+                  )}
+                >
+                  {item.label}
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 text-[10px]',
+                      filter === item.id
+                        ? 'bg-caramel/15 text-caramel-dark'
+                        : 'bg-cream-200 text-ink/55',
+                    )}
+                  >
+                    {countFor(item.id)}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {filtered.length === 0 ? (
+              <EmptyState
+                className="mt-5"
+                icon="gift"
+                title={orders.length === 0 ? 'Заказов пока нет' : 'Ничего не найдено'}
+                text={
+                  orders.length === 0
+                    ? 'Оформите заказ в конструкторе или загрузите демо-заказы, чтобы увидеть кабинет в работе.'
+                    : 'Попробуйте изменить фильтр или поисковый запрос.'
+                }
               />
-            ))}
-          </div>
+            ) : (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {filtered.map((order) => (
+                  <AdminOrderCard
+                    key={order.id}
+                    order={order}
+                    onOpen={() => setSelectedId(order.id)}
+                    onStatusChange={(status) => void handleQuickStatus(order.id, status)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

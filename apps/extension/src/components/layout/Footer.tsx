@@ -13,7 +13,7 @@ const NAV_LINKS = [
 ];
 
 export function Footer() {
-  const { brand, contacts, footer } = siteContent;
+  const { brand, contacts, footer, seller } = siteContent;
 
   return (
     <footer className="mt-16 border-t border-line/70 bg-cream-100/70">
@@ -49,6 +49,16 @@ export function Footer() {
               className="flex size-10 items-center justify-center rounded-full border border-line bg-cream-50 text-caramel transition-colors hover:border-caramel hover:text-cocoa"
             >
               <Icon name="phone" className="size-5" />
+            </a>
+            <a
+              href={seller.maxHref}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Написать в MAX: ${seller.name}, автор приложения`}
+              title={`MAX · ${seller.name} — автор приложения`}
+              className="flex size-10 items-center justify-center rounded-full border border-line bg-cream-50 text-caramel transition-colors hover:border-caramel hover:text-cocoa"
+            >
+              <Icon name="max" className="size-5" />
             </a>
           </div>
         </div>

@@ -13,6 +13,7 @@ export type IconName =
   | 'calculator'
   | 'telegram'
   | 'whatsapp'
+  | 'max'
   | 'clock'
   | 'calendar'
   | 'palette'
@@ -93,6 +94,13 @@ const ICONS: Record<IconName, ReactNode> = {
     <>
       <path d="M20 11.6a8 8 0 0 1-11.9 7L4 20l1.4-4A8 8 0 1 1 20 11.6Z" />
       <path d="M9.2 9.2c.3 2.6 2.4 4.7 5 5 .5.1 1-.3 1.1-.8l.1-.6-1.7-.8-.7.8c-1-.4-1.9-1.3-2.3-2.3l.8-.7-.8-1.7-.6.1c-.5.1-.9.6-.9 1Z" />
+    </>
+  ),
+  // MAX: скруглённый «пузырь» с буквой M — узнаваемый контур мессенджера.
+  max: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="5" />
+      <path d="M7.8 15.2V9l4.2 4.2L16.2 9v6.2" />
     </>
   ),
   clock: (

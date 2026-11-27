@@ -10,8 +10,14 @@ import '@fontsource/playfair-display/latin-700.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from '@/App';
+import { applyOpenGraph, redirectLegacyParams } from '@/services/ogService';
 import { registerServiceWorker } from '@/services/pwaService';
 import './styles/index.css';
+
+// Заголовок и OG-теги — до рендера React: превью и title не мигают.
+applyOpenGraph();
+// Старые ссылки вида ?admin=1 ведут в кабинет владельца через хэш-роутер.
+redirectLegacyParams();
 
 const container = document.getElementById('root');
 

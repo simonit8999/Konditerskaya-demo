@@ -303,6 +303,20 @@ export interface SiteContent {
     mapNote: string;
     mapHref: string;
   };
+  /**
+   * Контакты автора приложения: по ним кондитер заказывает себе такую же витрину.
+   * Отдельный блок, чтобы не смешивать их с контактами демо-кондитерской.
+   */
+  seller: {
+    name: string;
+    telegram: string;
+    telegramHref: string;
+    /** Черновик первого сообщения — подставляется в ссылку t.me. */
+    prefill: string;
+    max: string;
+    maxHref: string;
+    phoneHref: string;
+  };
   delivery: {
     lead: string;
     fee: number;

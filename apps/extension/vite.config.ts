@@ -13,12 +13,32 @@ import react from '@vitejs/plugin-react';
  * поэтому проект работает из подпапки https://<user>.github.io/<repo>/.
  * Для кастомного домена достаточно передать VITE_BASE_PATH="/".
  */
+/**
+ * Подставляет абсолютные адреса в OG-теги `index.html`.
+ *
+ * Краулеры мессенджеров не понимают относительные `og:image`/`og:url`,
+ * а проект живёт в подпапке GitHub Pages. Адрес берём из `VITE_SITE_URL`
+ * (его выставляет workflow), иначе — из `base`.
+ */
+function ogAbsoluteUrlsPlugin(base: string) {
+  return {
+    name: 'og-absolute-urls',
+    transformIndexHtml(html: string) {
+      const siteUrl = `${(process.env.VITE_SITE_URL ?? base).replace(/\/+$/, '')}/`;
+
+      return html
+        .replaceAll('__OG_URL__', siteUrl)
+        .replaceAll('__OG_IMAGE__', `${siteUrl}og-image.png`);
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const base = mode === 'production' ? process.env.VITE_BASE_PATH ?? '/candys-paradise/' : '/';
 
   return {
     base,
-    plugins: [react()],
+    plugins: [react(), ogAbsoluteUrlsPlugin(base)],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

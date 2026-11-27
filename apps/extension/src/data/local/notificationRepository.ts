@@ -123,15 +123,15 @@ function buildTemplate(order: Order, status: OrderStatus): NotificationTemplate 
       return {
         audience: 'owner',
         type: 'order_created',
-        title: 'Новый заказ',
+        title: 'Новая заявка',
         body: `${order.number} · ${order.customer.name} · ${formatPrice(order.total)}`,
       };
     case 'confirmed':
       return {
         audience: 'customer',
         type: 'order_confirmed',
-        title: 'Заказ подтверждён',
-        body: `${order.number}: кондитер подтвердил заказ и уже готовит его.`,
+        title: 'Заказ в работе',
+        body: `${order.number}: кондитер взял заказ в работу и уже готовит его.`,
       };
     case 'ready':
       return {
@@ -144,14 +144,14 @@ function buildTemplate(order: Order, status: OrderStatus): NotificationTemplate 
       return {
         audience: 'customer',
         type: 'order_completed',
-        title: 'Спасибо за заказ!',
-        body: `${order.number}: заказ завершён. Будем рады видеть вас снова.`,
+        title: 'Заказ доставлен',
+        body: `${order.number}: заказ выполнен. Спасибо, что выбрали нас!`,
       };
     case 'declined':
       return {
         audience: 'customer',
         type: 'order_declined',
-        title: 'Заказ не подтверждён',
+        title: 'Заказ отменён',
         body: `${order.number}: свяжитесь с нами — попробуем найти решение.`,
       };
     default:

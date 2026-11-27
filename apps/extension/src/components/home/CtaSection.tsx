@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { buttonStyles } from '@/components/ui/Button';
+import { ContactChoiceModal } from '@/components/seller/ContactChoiceModal';
+import { Button, buttonStyles } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Reveal } from '@/components/ui/Reveal';
 import { siteContent } from '@/references';
 
 /** Нижний призыв: обсудить внедрение или посмотреть демо. */
 export function CtaSection() {
-  const { cta, contacts } = siteContent;
+  const { cta } = siteContent;
+  const [contactOpen, setContactOpen] = useState(false);
 
   return (
     <section className="container-page py-12 lg:py-16">
@@ -30,15 +33,10 @@ export function CtaSection() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <a
-                href={contacts.telegramHref}
-                target="_blank"
-                rel="noreferrer"
-                className={buttonStyles('secondary', 'lg')}
-              >
+              <Button variant="secondary" size="lg" onClick={() => setContactOpen(true)}>
                 <Icon name="telegram" className="size-5" />
                 {cta.button}
-              </a>
+              </Button>
               <Link to="/builder" className={buttonStyles('outline', 'lg')}>
                 Посмотреть демо
               </Link>
@@ -46,6 +44,9 @@ export function CtaSection() {
           </div>
         </div>
       </Reveal>
+
+      <ContactChoiceModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </section>
   );
 }
+

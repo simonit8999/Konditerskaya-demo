@@ -4,7 +4,7 @@ import { siteContent } from '@/references';
 
 /** Контакты: плейсхолдеры демо-версии + карта-заглушка и мессенджеры. */
 export function ContactsPage() {
-  const { contacts } = siteContent;
+  const { contacts, seller } = siteContent;
 
   const cards = [
     { icon: 'mapPin' as const, title: 'Адрес', value: contacts.address, href: contacts.mapHref, external: true },
@@ -79,6 +79,17 @@ export function ContactsPage() {
             >
               <Icon name="whatsapp" className="size-4" />
               WhatsApp
+            </a>
+            <a
+              href={seller.maxHref}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`MAX: ${seller.name}, автор приложения`}
+              title={`MAX · ${seller.name} — автор приложения`}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-caramel/40 px-4 py-3 text-sm font-semibold text-cocoa transition-colors hover:bg-cream-200/60"
+            >
+              <Icon name="max" className="size-4" />
+              MAX
             </a>
           </div>
         </Reveal>

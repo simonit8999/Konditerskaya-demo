@@ -138,6 +138,67 @@ const DEMO_SPECS: DemoSpec[] = [
     comment: 'Перезвоните, пожалуйста, после 18:00.',
     address: 'ул. Тестовая, 3',
   },
+  // Повторные клиенты: чтобы вкладка «Клиенты» и группировка по телефону были осмысленными.
+  {
+    status: 'completed',
+    daysAgo: 12,
+    deliveryInDays: -11,
+    method: 'pickup',
+    customer: {
+      name: 'Мария Соколова',
+      phone: '+7 (999) 111-22-33',
+      contact: { channel: 'telegram', handle: '@maria_s' },
+    },
+    config: {
+      sizeId: '2kg',
+      baseId: 'sponge',
+      fillingId: 'berry',
+      creamId: 'cream',
+      decorationIds: ['berries'],
+      inscription: 'С днём рождения!',
+    },
+    ownerNote: 'Третий заказ клиента: постоянная надпись и ягоды, как в прошлый раз.',
+  },
+  {
+    status: 'completed',
+    daysAgo: 25,
+    deliveryInDays: -24,
+    method: 'delivery',
+    customer: {
+      name: 'Мария Соколова',
+      phone: '+7 (999) 111-22-33',
+      contact: { channel: 'telegram', handle: '@maria_s' },
+    },
+    config: {
+      sizeId: '3kg',
+      baseId: 'sponge',
+      fillingId: 'berry',
+      creamId: 'cream',
+      decorationIds: ['berries', 'creamDecor'],
+      inscription: 'Любимой маме',
+    },
+    address: 'ул. Примерная, 12, кв. 45',
+  },
+  {
+    status: 'completed',
+    daysAgo: 20,
+    deliveryInDays: -19,
+    method: 'pickup',
+    customer: {
+      name: 'Игорь Петров',
+      phone: '+7 (999) 222-33-44',
+      contact: { channel: 'whatsapp', handle: '+7 999 222-33-44' },
+    },
+    config: {
+      sizeId: '2kg',
+      baseId: 'honey',
+      fillingId: 'chocolate',
+      creamId: 'curd',
+      decorationIds: ['figures'],
+      inscription: '',
+    },
+    comment: 'Повторный заказ: без глютена, как в прошлый раз.',
+  },
 ];
 
 function shiftIso(iso: string, hours: number): string {

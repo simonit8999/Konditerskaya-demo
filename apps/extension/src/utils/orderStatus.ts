@@ -5,20 +5,20 @@ export const ORDER_STATUSES: OrderStatus[] = ['new', 'confirmed', 'ready', 'comp
 
 /** Подписи статусов заказа (видны и клиенту, и владельцу). */
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  new: 'Новый',
-  confirmed: 'Подтверждён · готовится',
+  new: 'Новая заявка',
+  confirmed: 'В работе',
   ready: 'Готов к выдаче',
-  completed: 'Забран / доставлен',
-  declined: 'Не подтверждён',
+  completed: 'Доставлен',
+  declined: 'Отменён',
 };
 
 /** Что клиент видит в кабинете и уведомлении при этом статусе. */
 export const ORDER_STATUS_CUSTOMER_TEXT: Record<OrderStatus, string> = {
-  new: 'Заказ принят и ждёт подтверждения кондитера.',
-  confirmed: 'Кондитер подтвердил заказ и уже готовит его.',
+  new: 'Заявка принята и ждёт подтверждения кондитера.',
+  confirmed: 'Заказ в работе: кондитер уже готовит его.',
   ready: 'Торт готов — можно забирать или ждать доставку.',
-  completed: 'Спасибо за заказ! Будем рады видеть вас снова.',
-  declined: 'Не удалось подтвердить заказ. Свяжитесь с нами — попробуем найти решение.',
+  completed: 'Заказ доставлен. Спасибо за заказ — будем рады видеть вас снова!',
+  declined: 'Заказ отменён. Свяжитесь с нами — попробуем найти решение.',
 };
 
 /** Классы для чипа статуса (Tailwind не умеет динамические классы — держим явно). */
@@ -44,16 +44,16 @@ export const ORDER_STATUS_ACTIONS: Record<
   { primary?: OrderStatusAction; decline?: OrderStatusAction; reopen?: OrderStatusAction }
 > = {
   new: {
-    primary: { status: 'confirmed', label: 'Подтвердить заказ', variant: 'primary' },
-    decline: { status: 'declined', label: 'Клиент не подтвердил', variant: 'danger' },
+    primary: { status: 'confirmed', label: 'Взять в работу', variant: 'primary' },
+    decline: { status: 'declined', label: 'Отменить заказ', variant: 'danger' },
   },
   confirmed: {
     primary: { status: 'ready', label: 'Готов к выдаче', variant: 'primary' },
-    decline: { status: 'declined', label: 'Клиент не подтвердил', variant: 'danger' },
+    decline: { status: 'declined', label: 'Отменить заказ', variant: 'danger' },
   },
   ready: {
-    primary: { status: 'completed', label: 'Клиент забрал / доставлен', variant: 'primary' },
-    decline: { status: 'declined', label: 'Клиент не подтвердил', variant: 'danger' },
+    primary: { status: 'completed', label: 'Заказ доставлен', variant: 'primary' },
+    decline: { status: 'declined', label: 'Отменить заказ', variant: 'danger' },
   },
   completed: {
     reopen: { status: 'confirmed', label: 'Вернуть в работу', variant: 'outline' },
@@ -62,6 +62,22 @@ export const ORDER_STATUS_ACTIONS: Record<
     reopen: { status: 'confirmed', label: 'Вернуть в работу', variant: 'outline' },
   },
 };
+
+/**
+ * Быстрые действия прямо в карточке заказа: одна кнопка — один переход.
+ * Порядок фиксирован, чтобы кнопки не «прыгали» между карточками.
+ */
+export interface OrderQuickAction {
+  status: OrderStatus;
+  label: string;
+  tone: 'work' | 'done' | 'cancel';
+}
+
+export const ORDER_STATUS_QUICK_ACTIONS: OrderQuickAction[] = [
+  { status: 'confirmed', label: 'В работе', tone: 'work' },
+  { status: 'completed', label: 'Доставлен', tone: 'done' },
+  { status: 'declined', label: 'Отменён', tone: 'cancel' },
+];
 
 /** Активные заказы: ещё не завершены и не отклонены. */
 export function isActiveStatus(status: OrderStatus): boolean {

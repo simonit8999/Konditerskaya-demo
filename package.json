@@ -16,6 +16,9 @@
     "test": "npm run test -w @candys/extension",
     "icons": "node scripts/generate-icons.mjs",
     "images": "node scripts/optimize-images.mjs",
+    "og:image": "node scripts/generate-og-image.mjs",
+    "demo:pages": "node scripts/generate-demo-pages.mjs",
+    "og:assets": "npm run og:image && npm run demo:pages",
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:preview": "node scripts/smoke-preview.mjs",
     "check": "npm run typecheck && npm run test && npm run build"

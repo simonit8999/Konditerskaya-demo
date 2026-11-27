@@ -1,43 +1,79 @@
 import { Icon } from '@/components/ui/Icon';
 import type { IconName } from '@/components/ui/Icon';
 import type { Order } from '@/types';
-import { formatPrice } from '@/utils/formatPrice';
+import { buildPeriodStats, STATS_PERIOD_DAYS } from '@/utils/customerStats';
+import { formatPrice, pluralize } from '@/utils/formatPrice';
 
 interface StatCardsProps {
   orders: Order[];
+  /** Окно аналитики в днях. Считаем по дате оформления (createdAt). */
+  days?: number;
 }
 
-/** KPI кабинета: деньги считаем только по завершённым заказам. */
-export function StatCards({ orders }: StatCardsProps) {
-  const newCount = orders.filter((order) => order.status === 'new').length;
-  const confirmedCount = orders.filter((order) => order.status === 'confirmed').length;
-  const completed = orders.filter((order) => order.status === 'completed');
+interface StatCard {
+  label: string;
+  value: string;
+  hint: string;
+  icon: IconName;
+  /** Длинные значения (название торта) показываем компактнее. */
+  compact?: boolean;
+}
 
-  const revenue = completed.reduce((sum, order) => sum + order.total, 0);
-  const profit = completed.reduce((sum, order) => sum + order.finance.profit, 0);
-  const averageCheck = completed.length > 0 ? Math.round(revenue / completed.length) : 0;
-  const margin = revenue > 0 ? Math.round((profit / revenue) * 1000) / 10 : 0;
-  const potential = orders
-    .filter((order) => order.status === 'new' || order.status === 'confirmed' || order.status === 'ready')
-    .reduce((sum, order) => sum + order.total, 0);
+/**
+ * KPI кабинета за период.
+ *
+ * Деньги считаются только по доставленным заказам (`completed`), поэтому
+ * «выручка» и «средний чек» не завышаются за счёт заявок в работе.
+ */
+export function StatCards({ orders, days = STATS_PERIOD_DAYS }: StatCardsProps) {
+  const stats = buildPeriodStats(orders, days);
+  const popular = stats.popularCake;
 
-  const stats: { label: string; value: string; hint: string; icon: IconName }[] = [
-    { label: 'Новые заказы', value: String(newCount), hint: 'ждут подтверждения', icon: 'bell' },
-    { label: 'Подтверждены', value: String(confirmedCount), hint: 'уже в работе', icon: 'check' },
-    { label: 'Выручка', value: formatPrice(revenue), hint: 'по завершённым', icon: 'wallet' },
-    { label: 'Прибыль', value: formatPrice(profit), hint: `маржа ${margin}%`, icon: 'chart' },
+  const cards: StatCard[] = [
+    {
+      label: `Заказов за ${days} ${pluralize(days, ['день', 'дня', 'дней'])}`,
+      value: String(stats.ordersCount),
+      hint: `в работе: ${stats.activeCount}`,
+      icon: 'bell',
+    },
+    {
+      label: 'Выручка',
+      value: formatPrice(stats.revenue),
+      hint: `доставлено: ${stats.completedCount}`,
+      icon: 'wallet',
+    },
+    {
+      label: 'Прибыль',
+      value: formatPrice(stats.profit),
+      hint: `маржа ${stats.marginPercent}%`,
+      icon: 'chart',
+    },
     {
       label: 'Средний чек',
-      value: formatPrice(averageCheck),
-      hint: 'по завершённым',
+      value: formatPrice(stats.averageCheck),
+      hint: 'по доставленным',
       icon: 'calculator',
     },
-    { label: 'Потенциал', value: formatPrice(potential), hint: 'новые + в работе', icon: 'sparkle' },
+    {
+      label: 'Самый популярный торт',
+      value: popular?.title ?? '—',
+      hint: popular
+        ? `${popular.count} ${pluralize(popular.count, ['раз', 'раза', 'раз'])} за период`
+        : 'пока нет данных',
+      icon: 'cake',
+      compact: true,
+    },
+    {
+      label: 'Потенциал',
+      value: formatPrice(stats.potential),
+      hint: 'новые + в работе',
+      icon: 'sparkle',
+    },
   ];
 
   return (
     <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-      {stats.map((stat) => (
+      {cards.map((stat) => (
         <div
           key={stat.label}
           className="rounded-3xl border border-line bg-cream-50 p-4 shadow-card"
@@ -46,9 +82,15 @@ export function StatCards({ orders }: StatCardsProps) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink/50">
               {stat.label}
             </p>
-            <Icon name={stat.icon} className="size-4 text-caramel" />
+            <Icon name={stat.icon} className="size-4 shrink-0 text-caramel" />
           </div>
-          <p className="mt-2 font-display text-xl font-semibold tabular-nums text-cocoa">
+          <p
+            className={
+              stat.compact
+                ? 'mt-2 line-clamp-2 font-display text-lg font-semibold leading-snug text-cocoa'
+                : 'mt-2 font-display text-xl font-semibold tabular-nums text-cocoa'
+            }
+          >
             {stat.value}
           </p>
           <p className="mt-0.5 text-[11px] text-ink/50">{stat.hint}</p>
@@ -57,3 +99,4 @@ export function StatCards({ orders }: StatCardsProps) {
     </div>
   );
 }
+

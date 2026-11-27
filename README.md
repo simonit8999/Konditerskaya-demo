@@ -16,6 +16,7 @@ PWA-витрина с конструктором тортов для конди�
 - [Себестоимость и прибыль](#себестоимость-и-прибыль)
 - [Архитектура БД и ИИ-помощник](#архитектура-бд-и-ии-помощник)
 - [Интеграция с Telegram](#интеграция-с-telegram)
+- [OG-превью и персональные ссылки](#og-превью-и-персональные-ссылки)
 - [PWA: манифест, service worker, офлайн](#pwa-манифест-service-worker-офлайн)
 - [Деплой на GitHub Pages](#деплой-на-github-pages)
 - [Скрипты](#скрипты)
@@ -45,13 +46,13 @@ PWA-витрина с конструктором тортов для конди�
 │  │  ├─ public/                 # manifest.json, service-worker.js, offline.html, icons/
 │  │  └─ src/
 │  │     ├─ assets/gallery/      # оптимизированные WebP + карта ассетов
-│  │     ├─ components/          # layout, ui, cake, home, cart, pwa, admin, notifications, assistant
+│  │     ├─ components/          # layout, ui, cake, home, cart, pwa, admin, seller, notifications, assistant
 │  │     ├─ context/             # Cart, Orders, Notifications, Toast
 │  │     ├─ data/                # OrderRepository: localStorage-адаптер + HTTP-заглушка
 │  │     ├─ hooks/               # useCakeBuilder, useOrders, useOwnerSession, useNotifications…
 │  │     ├─ pages/               # Home, Builder, Cart, Checkout, Dashboard, Admin, статические
 │  │     ├─ references/          # cakeData.json, siteContent.json, business.json
-│  │     ├─ services/            # ordersService, telegramMessage, assistantService, pwaService
+│  │     ├─ services/            # ordersService, telegramMessage, assistantService, ogService, pwaService
 │  │     ├─ styles/index.css     # Tailwind-слои, базовые стили, утилиты
 │  │     ├─ types/               # доменные типы (CakeConfig, Order, SiteContent…)
 │  │     └─ utils/               # цена, финансы, миграция, статусы, помощник + тесты
@@ -123,10 +124,20 @@ size.basePrice
 - `/admin` — кабинет владельца. Вход по PIN из `src/references/business.json`
   (по умолчанию `2468`), сессия хранится в `sessionStorage`.
 - Статусы: `new → confirmed → ready → completed`, плюс `declined`.
-  Старые `processing` / `delivered` автоматически мигрируют при чтении.
-- Владелец подтверждает заказ, отмечает готовность и завершение, отклоняет,
-  возвращает в работу, оставляет заметку. В карточке видны состав, комментарий
-  клиента (с предупреждением об аллергенах), контакты, история и финансы.
+  Подписи в интерфейсе: **Новая заявка → В работе → Готов к выдаче → Доставлен**
+  и **Отменён**. Старые `processing` / `delivered` автоматически мигрируют при чтении.
+  Идентификаторы статусов не менялись, поэтому данные в `localStorage` миграции не требуют.
+- Владелец берёт заказ в работу, отмечает готовность и доставку, отменяет,
+  возвращает в работу, оставляет заметку. В карточке видны дата и время оформления,
+  состав, комментарий клиента (с предупреждением об аллергенах), история и финансы.
+- Быстрые действия «В работе / Доставлен / Отменён» доступны прямо в списке,
+  без открытия модалки (`ORDER_STATUS_QUICK_ACTIONS` в `utils/orderStatus.ts`).
+- Вкладка **«Клиенты»** группирует заказы по нормализованному телефону:
+  имя из последнего заказа, число заказов, сумма доставленных, дата последнего
+  заказа и ссылка в мессенджер клиента (`utils/customerStats.ts`).
+- KPI и график считаются за последние **30 дней по дате оформления** (`createdAt`):
+  выручка и прибыль — только по доставленным, средний чек — выручка ÷ число
+  доставленных, «самый популярный торт» — по названиям `items[].title`.
 - Клиент видит статус, историю, комментарий и мессенджер; уведомления —
   колокольчик в шапке, баннер на `/orders` и `/order/:id`, тосты.
 - Кнопка «Загрузить демо-заказы» в кабинете создаёт набор примеров, помеченных
@@ -215,6 +226,59 @@ Telegram/email/push-уведомления.
 `apps/api` разворачивается на Node-хостинге, либо переносите `formatOrder.mjs` и
 `telegram.mjs` в serverless-функцию (пример в комментарии `apps/api/src/server.mjs`).
 
+## OG-превью и персональные ссылки
+
+Демо можно показывать клиенту персональной ссылкой: превью в мессенджере будет
+с названием его кондитерской, а приложение откроется уже с этим названием.
+
+**Что делает `?shop=`**
+
+- `applyOpenGraph()` (`src/services/ogService.ts`) вызывается в `main.tsx` до
+  рендера React: обновляет `document.title`, `og:*`, `twitter:*` и `canonical`.
+- `parseShopParam()` (`src/utils/og.ts`) читает параметр и из обычной
+  query-строки, и из hash-роутера (`#/?shop=Тортик`), вырезает HTML-символы и
+  ограничивает название 40 символами.
+
+**Честное ограничение.** Telegram, WhatsApp, VK и Slack не выполняют JavaScript:
+они читают только исходный HTML. Поэтому для красивых превью в мессенджерах
+используются статические шлюзы, а JS-слой отвечает за `document.title` и
+`og:*-теги` для индексации.
+
+**Статические шлюзы `/d/<slug>/`**
+
+1. Список магазинов — `apps/references/demo-shops.json`
+   (`{ "slug": "tortik", "shop": "Тортик", "city": "Казань" }`).
+2. `npm run demo:pages` генерирует `apps/extension/public/d/<slug>/index.html`
+   с настоящими `og:title` / `og:description` / `og:image` и редиректом
+   `../../?shop=Тортик#/`.
+3. Ссылка `https://<site>/d/tortik/` в Telegram даёт превью
+   «Приложение для «Тортик»», а человек попадает в приложение с подставленным
+   названием.
+
+**Картинка превью.** `npm run og:image` рисует `public/og-image.png` (1200×630)
+через уже установленный `sharp`. В картинке нет текста — только фигуры и
+градиенты: так сборка не зависит от кириллических шрифтов в libvips. Тексты
+превью берутся из OG-тегов.
+
+**Адреса.** В `index.html` стоят плейсхолдеры `__OG_URL__` / `__OG_IMAGE__`;
+плагин в `vite.config.ts` подставляет абсолютный адрес из `VITE_SITE_URL`
+(для GitHub Pages — `https://<user>.github.io/<repo>/`). Относительные
+`og:image` краулеры не читают.
+
+```powershell
+$env:VITE_SITE_URL="https://<user>.github.io/<repo>/"
+npm run og:assets   # og:image + demo:pages
+```
+
+В `.github/workflows/deploy.yml` шаг «Generate OG assets» выполняется перед
+сборкой, поэтому шлюзы и картинка попадают в `dist` автоматически.
+
+**Контакты автора приложения.** Блок `siteContent.seller` — Telegram, MAX и
+телефон продавца витрины. Он не смешивается с `siteContent.contacts`
+(контактами демо-кондитерской): кнопка «Хочу так же» открывает модалку выбора
+канала, а в черновик сообщения подставляется название магазина из `?shop=`.
+
+
 ## PWA: манифест, service worker, офлайн
 
 - `apps/extension/public/manifest.json` — `start_url`/`scope: "./"`, `display: standalone`,
@@ -245,8 +309,9 @@ Telegram/email/push-уведомления.
    `GITHUB_TOKEN` таких прав не имеет. Для приватного репозитория на бесплатном
    плане GitHub Pages недоступны — репозиторий должен быть публичным.
 3. Дальше каждый push в `main` запускает `.github/workflows/deploy.yml`:
-   `npm ci` → `typecheck` → `test` → `build` (с `VITE_BASE_PATH=/<имя-репозитория>/`)
-   → публикация `apps/extension/dist`.
+   `npm ci` → `og:image` + `demo:pages` → `typecheck` → `test` → `build`
+   (с `VITE_BASE_PATH=/<имя-репозитория>/` и `VITE_SITE_URL`) → публикация
+   `apps/extension/dist`.
 4. Витрина: `https://<user>.github.io/<repo>/`.
 
 Локальная проверка «как на проде»:
@@ -273,6 +338,9 @@ npm run preview   # http://localhost:4173/candys-paradise/
 | `npm run test` | unit-тесты Vitest |
 | `npm run icons` | генерация PNG-иконок PWA |
 | `npm run images` | JPG → WebP 800w/400w |
+| `npm run og:image` | `public/og-image.png` 1200×630 для превью ссылок |
+| `npm run demo:pages` | статические шлюзы `public/d/<slug>/` для Telegram |
+| `npm run og:assets` | `og:image` + `demo:pages` одной командой |
 | `node scripts/smoke-api.mjs` | `/health` + POST заказа в API |
 | `node scripts/smoke-preview.mjs` | поднимает preview и проверяет PWA-файлы |
 
